@@ -1,5 +1,5 @@
 """
-WSGI config for recipesite project.
+WSGI config for campuscook project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'recipesite.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'campuscook.settings')
 
 application = get_wsgi_application()

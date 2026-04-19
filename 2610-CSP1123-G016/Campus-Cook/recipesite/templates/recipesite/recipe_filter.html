@@ -1,0 +1,181 @@
+{% extends 'recipesite/base.html' %}
+{% load static %}
+{% block content %}
+    <main class = "recipe_filter">
+    <h1 class = "mainheader">Campus Cook</h1>
+        <!-- BACK NAVIGATION ────────────────────────────────────────
+         goes back to recipe list                               -->
+    <nav class="recipe_nav">
+        <a href="{% url 'recipe_list' %}" class="back_link">← Back to Recipes</a>
+
+        <!-- links to filter showing same category recipes
+             recipe.category pulls category from database       -->
+        <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}" class="filter_link">
+            More {{ recipe.get_category_display }} Recipes
+        </a>
+    </nav>
+        <!-- FILTER FORM ─────────────────────────────────-->
+    <form method="GET" action="" class="filter_form">
+
+        <!-- SEARCH ───────────────────────────────────-->
+        <div class="filter_group">
+            <label class="filter_label">Search</label>
+            <input
+                type="text"
+                name="search"
+                class="filter_input"
+                placeholder="e.g. fried rice..."
+                value="{{ request.GET.search }}"
+            >
+        </div>
+
+        <!-- CATEGORY ─────────────────────────────────-->
+        <div class="filter_group">
+            <label class="filter_label">Category</label>
+            <div class="filter_options">
+                <label class="filter_check">
+                    <input type="checkbox" name="category" value="breakfast"> Breakfast
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="category" value="lunch"> Lunch
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="category" value="dinner"> Dinner
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="category" value="snack"> Snack
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="category" value="dessert"> Dessert
+                </label>
+            </div>
+        </div>
+
+        <!-- BUDGET ───────────────────────────────────-->
+        <div class="filter_group">
+            <label class="filter_label">Budget</label>
+            <div class="filter_options">
+                <label class="filter_check">
+                    <input type="checkbox" name="budget" value="low"> Below RM5
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="budget" value="medium"> RM5 - RM15
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="budget" value="high"> Above RM15
+                </label>
+            </div>
+        </div>
+
+        <!-- COOKING TIME ─────────────────────────────-->
+        <div class="filter_group">
+            <label class="filter_label">Cooking Time</label>
+            <div class="filter_options">
+                <label class="filter_check">
+                    <input type="checkbox" name="time" value="quick"> Under 15 mins
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="time" value="medium"> 15 - 30 mins
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="time" value="long"> Above 30 mins
+                </label>
+            </div>
+        </div>
+
+        <!-- APPLIANCE ────────────────────────────────-->
+        <div class="filter_group">
+            <label class="filter_label">Appliance</label>
+            <div class="filter_options">
+                <label class="filter_check">
+                    <input type="checkbox" name="appliance" value="none"> No Appliance
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="appliance" value="microwave"> Microwave
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="appliance" value="oven"> Oven
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="appliance" value="stove"> Stove
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="appliance" value="airfryer"> Air Fryer
+                </label>
+                <label class="filter_check">
+                    <input type="checkbox" name="appliance" value="blender"> Blender
+                </label>
+            </div>
+        </div>
+
+        <!-- HALAL ────────────────────────────────────-->
+        <div class="filter_group">
+            <label class="filter_label">Dietary</label>
+            <div class="filter_options">
+                <label class="filter_check">
+                    <input type="radio" name="halal" value="" checked> All
+                </label>
+                <label class="filter_check">
+                    <input type="radio" name="halal" value="true"> Halal Only
+                </label>
+                <label class="filter_check">
+                    <input type="radio" name="halal" value="false"> Non-Halal Only
+                </label>
+            </div>
+        </div>
+
+        <!-- BUTTONS ──────────────────────────────────-->
+        <div class="filter_buttons">
+            <button type="submit" class="btn_apply">Apply Filters</button>
+            <a href="{% url 'recipe_filter' %}" class="btn_clear">Clear All</a>
+        </div>
+
+    </form>
+
+
+    <!-- RESULTS ──────────────────────────────────────
+         loops through filtered recipes from database -->
+    <section class="filter_results">
+
+        <h2 class="results_title">Results</h2>
+
+        <div class="recipe_cards">
+
+            {% for recipe in recipes %}
+                <article class="card">
+                    <div class="card_image_wrap">
+                        <a href="{% url 'recipe_detail' recipe.id %}">
+                            {% if recipe.image %}
+                                <img src="{{ recipe.image.url }}" alt="{{ recipe.title }}" class="card_image">
+                            {% else %}
+                                <div class="card_image_placeholder"></div>
+                            {% endif %}
+                        </a>
+                    </div>
+                    <div class="card_body">
+                        <h2 class="card_title">{{ recipe.title }}</h2>
+                        <p class="card_desc">{{ recipe.description|truncatewords:20 }}</p>
+                        <div class="card_tags">
+                            <span class="recipe_category">📂 {{ recipe.get_category_display }}</span>
+                            <span class="recipe_budget">💰 {{ recipe.get_budget_display }}</span>
+                            <span class="recipe_time">⏱ {{ recipe.time_minutes }} mins</span>
+                            {% if recipe.is_halal %}
+                                <span class="recipe_halal">✅ Halal</span>
+                            {% else %}
+                                <span class="recipe_nonhalal">❌ Non-Halal</span>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'recipe_detail' recipe.id %}" class="recipe_link">View Recipe →</a>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="no_results">No recipes match your filters!</p>
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+</main>
+
+{% endblock %}

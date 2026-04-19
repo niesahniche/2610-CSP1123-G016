@@ -1,0 +1,83 @@
+<!--- havent added function for user input -->
+<!--- need to add search functionalityand pagination -->
+<!--- hardcoded, turn to dynamic with database later -->
+<!--- filters function will be its own page separate from search; search macam search biasa -->
+<!DOCTYPE html>
+
+<html lang="en">
+<head> <!--- head : not visible on page -->
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Cook</title>
+    <!--- NO JS YET --><script src="./js.js" defer></script>
+    <!--- MINIMAL CSS: NO ACTUAL STYLING --><link rel="stylesheet" href="style.css">
+</head>
+
+<!--- HARDCODED -->
+<body>
+
+<h1 class = "mainheader">Campus Cook</h1>
+
+    <!-- SEARCH BAR ─────────────────────────────────────────────
+         hardcoded, no function yet
+         later replace action="" with:
+         action="{% url 'recipe_list' %}"
+         later add to input:
+         value="{{ request.GET.search }}"                        -->
+    <form action="" method="GET" class="search_form">
+        <input
+            type="text"
+            name="search"
+            class="search_input"
+            placeholder="Search recipes..."
+        >
+        <button type="submit" class="search_btn">Search</button>
+    </form>
+
+
+    <!-- FILTER LINK ─────────────────────────────────────────────
+         later replace href with:
+         href="{% url 'recipe_filter' %}"                        -->
+    <div class="filter_link_wrap">
+        <a href="recipe_filter.html" class="btn_filter_page">
+            🔍 Filter Recipes
+        </a>
+    </div>
+
+    <!-- RECIPE CARD ───────────────────────────────────────────── -->
+    <!--- hardcoded, turn to dynamic with database later -->
+    <main class = "recipe_list">
+        <section class = "recipe_cards">
+
+            <article class = "card">
+                <h2>Pizza Grilled Cheese</h2>
+                <div class="card_image_wrap">
+                <a href = "recipe_detail.html"><img src = "pizza_bread.webp" alt = "Pizza Grilled Cheese"></a></div>
+                <p>This pizza grilled cheese is a delicious twist on the classic grilled cheese sandwich.</p>
+            </article>
+
+            <article class = "card">
+                <h2>Spicy Sriracha Noodles</h2>
+                <div class="card_image_wrap">
+                <a href = "recipe_detail.html"><img src = "spicy_noodles.webp" alt = "Spicy Sriracha Noodles"></a></div>
+                <p>These spicy sriracha noodles are a quick and delicious meal that packs a punch of flavor.</p> 
+            </article>
+
+            <article class = "card">
+                <h2>Chocolate Mug Cake</h2>
+                <div class="card_image_wrap">
+                <a href = "recipe_detail.html"><img src = "chocolate_mug_cake.webp" alt = "Chocolate Mug Cake"></a></div>
+                <p>This delicious chocolate mug cake is a quick and easy dessert that can be made in just a few minutes.</p>
+            </article>
+
+        </section>
+    </main>
+
+    <footer>
+        <div class = "container">© Campus Cook</div>
+    </footer>
+
+</body>
+
+</html>

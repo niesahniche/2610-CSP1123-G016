@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head> <!--- head : not visible on page -->
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Cook</title>
+    <!--- NO JS YET --><script src="./js.js" defer></script>
+    <!--- MINIMAL CSS: NO ACTUAL STYLING --><link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <a href="{% url 'recipe_list' %}">Recipes</a> |
+        <a href="{% url 'recipe_filter' %}">Filter</a>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+
+</body>
+</html>

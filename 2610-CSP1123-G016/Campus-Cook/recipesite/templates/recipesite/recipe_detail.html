@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+
+<!--- hardcode only the layout and let the details appear later once database and id for recipes are given-->
+<!--- need : title, description, ingredients, time, cost/budget, instructions, appliances used, rating -->
+<!--- cannot be fully hardcoded as it needs recipe.id (Primary key) to show specific details -->
+<!--- have not been linked yet as data is not proper (no primary key in hardcoded recipe_list) -->
+
+{% extends 'recipesite/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<main class="recipe_detail">
+
+    <!-- BACK NAVIGATION ────────────────────────────────────────
+         goes back to recipe list                               -->
+    <nav class="detail_nav">
+        <a href="{% url 'recipe_list' %}" class="back_link">← Back to Recipes</a>
+
+        <!-- links to filter showing same category recipes
+             recipe.category pulls category from database       -->
+        <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}" class="filter_link">
+            More {{ recipe.get_category_display }} Recipes
+        </a>
+    </nav>
+
+
+    <article class="detail_card">
+
+        <!-- IMAGE ──────────────────────────────────────────────
+             recipe.image.url pulls image path from database
+             recipe.title used as alt text                     -->
+        <div class="detail_image_wrap">
+            {% if recipe.image %}
+                <img
+                    src="{{ recipe.image.url }}"
+                    alt="{{ recipe.title }}"
+                    class="detail_image"
+                >
+            {% else %}
+                <!-- shows placeholder if no image uploaded -->
+                <div class="detail_image_placeholder"></div>
+            {% endif %}
+        </div>
+
+
+        <div class="detail_body">
+
+            <!-- TITLE ──────────────────────────────────────────
+                 recipe.title pulls title from database         -->
+            <h1 class="detail_title">{{ recipe.title }}</h1>
+
+
+            <!-- TAGS ROW ───────────────────────────────────────────────
+                each tag is now a clickable link to filter page
+                clicking a tag shows all recipes with same tag         -->
+            <div class="detail_tags">
+
+                <!-- clicking takes to filter showing same category -->
+                <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}"
+                    class="recipe_category tag_link">
+                    📂 {{ recipe.get_category_display }}
+                </a>
+
+                <!-- clicking takes to filter showing same budget -->
+                <a href="{% url 'recipe_filter' %}?budget={{ recipe.budget }}"
+                    class="recipe_budget tag_link">
+                    💰 {{ recipe.get_budget_display }}
+                </a>
+
+                <!-- clicking takes to filter showing same cooking time range -->
+                <a href="{% url 'recipe_filter' %}?time={% if recipe.time_minutes < 15 %}quick{% elif recipe.time_minutes <= 30 %}medium{% else %}long{% endif %}"
+                    class="recipe_time tag_link">
+                    ⏱ {{ recipe.time_minutes }} mins
+                </a>
+
+                <!-- clicking takes to filter showing same appliance -->
+                <a href="{% url 'recipe_filter' %}?appliance={{ recipe.appliance }}"
+                    class="recipe_appliance tag_link">
+                    🔧 {{ recipe.get_appliance_display }}
+                </a>
+
+                <!-- clicking takes to filter showing halal or non halal -->
+                {% if recipe.is_halal %}
+                    <a href="{% url 'recipe_filter' %}?halal=true"
+                        class="recipe_halal tag_link">
+                        ✅ Halal
+                    </a>
+                {% else %}
+                    <a href="{% url 'recipe_filter' %}?halal=false"
+                        class="recipe_nonhalal tag_link">
+                        ❌ Non-Halal
+                    </a>
+                {% endif %}
+                    </div>
+
+            <!-- PRICE ──────────────────────────────────────────
+                 recipe.price pulls decimal number from database -->
+            <p class="detail_price">
+                Estimated Cost: <strong>RM{{ recipe.price }}</strong>
+            </p>
+
+
+            <!-- DESCRIPTION SECTION ────────────────────────────
+                 recipe.description pulls text from database    -->
+            <section class="detail_section">
+                <h2 class="section_title">Description</h2>
+                <p class="detail_description">{{ recipe.description }}</p>
+            </section>
+
+
+            <!-- INGREDIENTS SECTION ────────────────────────────
+                 recipe.ingredients pulls text from database    -->
+            <section class="detail_section">
+                <h2 class="section_title">Ingredients 🛒</h2>
+                <p class="detail_ingredients">{{ recipe.ingredients }}</p>
+            </section>
+
+
+            <!-- INSTRUCTIONS SECTION ───────────────────────────
+                 recipe.instructions pulls text from database   -->
+            <section class="detail_section">
+                <h2 class="section_title">Instructions 👩‍🍳</h2>
+                <p class="detail_instructions">{{ recipe.instructions }}</p>
+            </section>
+
+
+            <!-- DATE ADDED ─────────────────────────────────────
+                 recipe.created_at pulls datetime from database
+                 |date filter formats it nicely                 -->
+            <p class="detail_date">
+                Added on: {{ recipe.created_at|date:"d M Y" }}
+            </p>
+
+
+            <!-- BOTTOM NAVIGATION ──────────────────────────────
+                 links back to list and filter                  -->
+            <div class="detail_footer_links">
+                <a href="{% url 'recipe_list' %}" class="back_link">
+                    ← Back to All Recipes
+                </a>
+                <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}" class="filter_link">
+                    More {{ recipe.get_category_display }} Recipes →
+                </a>
+            </div>
+
+        </div>
+    </article>
+
+</main>
+
+{% endblock %}

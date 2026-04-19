@@ -1,0 +1,14 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Open recipe_list.html",
+            "file": "c:\\Mini IT\\2610-CSP1123-G016\\Campus-Cook\\recipesite\\templates\\recipesite\\recipe_list.html"
+        }
+    ]
+}

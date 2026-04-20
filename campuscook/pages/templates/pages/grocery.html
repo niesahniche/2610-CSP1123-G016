@@ -1,0 +1,49 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grocery List</title>
+  <!-- Correct static paths -->
+  <link rel="stylesheet" href="{% static 'pages/style.css' %}">
+</head>
+<body>
+  <h1>Grocery List Page</h1>
+  <button onclick="location.href='/'">Back to Home</button>
+
+  <div class="container">
+    <div class="grocery-box">
+      <h2>Grocery List:</h2>
+      <form id="addForm">
+        <input type="text" id="itemInput" placeholder="Type an item">
+        <button type="submit">Add Item</button>
+      </form>
+      <ul class="grocery-list" id="groceryList"></ul>
+    </div>
+
+    <!-- Quick add preset items -->
+    <div class="preset-items">
+      <p>Quick add:</p>
+      <button type="button" class="btn" onclick="addItem('Bread')">
+        <img src="{% static 'pages/images/bread.png' %}" alt="Bread" class="icon"> Bread
+      </button>
+      <button type="button" class="btn" onclick="addItem('Rice')">
+        <img src="{% static 'pages/images/rice.png' %}" alt="Rice" class="icon"> Rice
+      </button>
+      <button type="button" class="btn" onclick="addItem('Eggs')">
+        <img src="{% static 'pages/images/eggs.png' %}" alt="Eggs" class="icon"> Eggs
+      </button>
+      <button type="button" class="btn" onclick="addItem('Milk')">
+        <img src="{% static 'pages/images/milk.png' %}" alt="Milk" class="icon"> Milk
+      </button>
+      <button type="button" class="btn" onclick="addItem('Cheese')">
+        <img src="{% static 'pages/images/cheese.png' %}" alt="Cheese" class="icon"> Cheese
+      </button>
+    </div>
+  </div>
+
+  <!-- Place script at the end of body so DOM is ready -->
+  <script src="{% static 'pages/script.js' %}"></script>
+</body>
+</html>

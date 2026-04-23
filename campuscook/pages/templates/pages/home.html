@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>CampusCook Home</title>
-</head>
-<body>
-    <h1>Home Page</h1>
-    <button onclick="location.href='/about/'">Go to About Page</button>
-    <button onclick="location.href='/grocery/'">Go to Grocery List Page</button>
-</body>
-</html>
+{% extends 'pages/base.html' %}
+
+{% block content %}
+    <h1>Hello world</h1>
+
+    <p>This is a template</p>
+{% endblock %} 

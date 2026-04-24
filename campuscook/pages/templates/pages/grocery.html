@@ -33,8 +33,10 @@
         <li>
             {% if item.ingredient %}
                 {{ item.ingredient.name }}
+                <a href="{% url 'remove_item' item.id %}">Remove</a>
             {% else %}
                 {{ item.custom_name }}
+                <a href="{% url 'remove_item' item.id %}">Remove</a>
             {% endif %}
         </li>
     {% empty %}

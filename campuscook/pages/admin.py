@@ -5,6 +5,7 @@ from django.contrib import admin
 from .models import *
 
 admin.site.register(Ingredient)
+admin.site.register(CustomIngredient)
 admin.site.register(AppUser)
 admin.site.register(RecipeFilter)
 admin.site.register(Recipe)

@@ -7,33 +7,40 @@ class AppUser(models.Model):
     password = models.CharField(max_length=100)
     def __str__(self):
         return self.username
-
-class Ingredient(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    def __str__(self):
-        return self.name
-
+    
 class RecipeFilter(models.Model):
     name = models.CharField(max_length=100)
     def __str__(self):
         return self.name
-
+    
+class Ingredient(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    def __str__(self):
+        return self.name
+    
 class Recipe(models.Model):
     name = models.CharField(max_length=100)
     ingredients = models.ManyToManyField(Ingredient)
     cooking_time = models.IntegerField()
     appliance = models.CharField(max_length=100)
     instructions = models.TextField()
-    filters = models.ManyToManyField(RecipeFilter)
+    filters = models.ManyToManyField(RecipeFilter, blank=True, null=True)
     user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
     def __str__(self):
         return self.name
-
+    
+class CustomIngredient(models.Model):
+    name = models.CharField(max_length=100)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    def __str__(self):
+        return self.name
+    
 class Grocery(models.Model):
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, null=True, blank=True)
+    custom_name = models.CharField(max_length=100, null=True, blank=True)
     user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
     def __str__(self):
-        return f"{self.user.username} - {self.ingredient.name}"
+        return self.ingredient.name if self.ingredient else self.custom_name
 
 class SavedRecipe(models.Model):
     user = models.ForeignKey(AppUser, on_delete=models.CASCADE)

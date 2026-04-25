@@ -2,17 +2,24 @@
 
 {% block content %}
 
-<h2>{{ recipe.name }}</h2>
+{% for recipe in recipes %}
+    <li><a href="/check/{{ recipe.id }}/">{{ recipe.name }}</a></li>
+{% endfor %}
 
-{% if not missing %}
-    <p>You can cook this!</p>
-{% else %}
-    <p>Missing ingredients:</p>
-    <ul>
-        {% for item in missing %}
-            <li>{{ item.name }}</li>
-        {% endfor %}
-    </ul>
+{%if recipe.id %}
+    <h2>{{ recipe.name }}</h2>
+
+    {% if not missing %}
+        <p>You can cook this!</p>
+    {% else %}
+        <p>Missing ingredients:</p>
+        <ul>
+            {% for item in missing %}
+                <li>{{ item.name }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    
 {% endif %}
 
 {% endblock %}

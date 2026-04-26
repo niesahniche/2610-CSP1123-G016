@@ -1,0 +1,160 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+
+/* Parent container to hold both boxes side by side */
+.container {
+  display: flex;
+  gap: 20px; /* space between boxes */
+}
+
+.grocery-box {
+  padding: 15px;
+  width: 600px;
+  height: 500px;
+  border: 2px solid #333;
+
+}
+
+.grocery-box h2 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.grocery-list {
+  list-style-type: decimal; /* numbers on the left */
+  padding-left: 20px;
+}
+
+.grocery-list li {
+  display: flex;              /* allow text + button on same line */
+  justify-content: space-between; /* push button to right side */
+  align-items: center;
+  margin: 8px 0;
+}
+
+.grocery-list li button {
+  background: none;
+  border: none;
+  color: #c00;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Preset items box aligned to the right */
+.preset-items {
+  padding: 15px;
+  width: 600px;
+  height: 500px;
+  border: 2px solid #333;
+
+}
+
+.btn {
+  background-color: #ffffff;   /* warm yellow */
+  border: 1px solid #333;     
+  margin: 5px;    /* dark border */
+  border-radius: 8px;
+  padding: 20px 32px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}
+
+/* ─── RECIPE CARDS ────────────────────────────────*/
+/* Basic reset and styling */
+.recipe_cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* Card styling */
+.card {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Image wrapper to maintain aspect ratio and crop images */
+.card_image_wrap {
+    width: 100%;
+    aspect-ratio: 16 / 9;      /* ← change this number to make images smaller */
+    overflow: hidden;
+    max-height: 220px;                /* ← this makes all images same size. cap: image never gets bigger than this*/
+}
+
+/* Image styling to cover the wrapper without stretching */
+.card_image_wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;       /* ← no stretch, no squish, just crop */
+    object-position: center;
+    display: block;
+}
+
+/* ─── SEARCH FORM ────────────────────────────────*/
+.search_form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.search_input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.search_btn {
+    padding: 8px 16px;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.search_btn:hover {
+    background: #000;
+}
+
+/* ─── FILTER LINK BUTTON ─────────────────────────
+   sits between search bar and recipe cards        */
+.filter_link_wrap {
+    margin-bottom: 20px;
+}
+
+.btn_filter_page {
+    display: inline-block;
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
+    background: #f9f9f9;
+}
+
+.btn_filter_page:hover {
+    background: #f0f0f0;
+}

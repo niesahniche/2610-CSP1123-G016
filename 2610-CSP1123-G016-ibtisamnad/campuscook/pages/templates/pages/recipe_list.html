@@ -1,0 +1,135 @@
+<!--- havent added function for user input -->
+<!--- need to add search functionalityand pagination -->
+<!--- hardcoded, turn to dynamic with database later -->
+<!--- filters function will be its own page separate from search; search macam search biasa -->
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<main class="recipe_list">
+
+    <!-- SEARCH BAR ──────────────────────────────────────────────────────
+         search query goes to recipe_list view which filters Recipe table
+         by recipe.name (icontains = case-insensitive partial match)     -->
+    <form action="{% url 'recipe_list' %}" method="GET" class="search_form">
+        <input
+            type="text"
+            name="search"
+            class="search_input"
+            placeholder="Search recipes..."
+            value="{{ request.GET.search }}"
+        >
+        <button type="submit" class="search_btn">Search</button>
+    </form>
+
+    <!-- FILTER LINK ─────────────────────────────────────────────────────
+         links to recipe_filter page                                      -->
+    <div class="filter_link_wrap">
+        <a href="{% url 'recipe_filter' %}" class="btn_filter_page">
+            🔍 Filter Recipes
+        </a>
+    </div>
+
+    <!-- RECIPE CARDS ────────────────────────────────────────────────────
+         loops through Recipe table rows passed from recipe_list view
+         recipe.id   → PK of Recipe table
+         recipe.name → name field in Recipe table                        -->
+    <section class="recipe_cards">
+
+        {% for recipe in recipes %}
+            <article class="card">
+
+                <!-- recipe.name → name field from Recipe table -->
+                <h2>{{ recipe.name }}</h2>
+
+                <div class="card_image_wrap">
+                    <!-- links to recipe detail page using recipe.id as PK -->
+                    <a href="{% url 'recipe_detail' recipe.id %}">
+                        <!-- no image field in model yet — placeholder shown -->
+                        <div class="card_image_placeholder"></div>
+                    </a>
+                </div>
+
+                <!-- cooking_time and appliance → fields from Recipe table -->
+                <p>⏱ {{ recipe.cooking_time }} mins | 🔧 {{ recipe.appliance }}</p>
+
+                <!-- SAVE BUTTON ──────────────────────────────────────────────
+                     data-recipe-id="{{ recipe.id }}" → PK from Recipe table
+                     onclick sends POST to /api/saved-recipes/
+                     Django stores: SavedRecipe(recipe_id=recipe.id, user=user) -->
+                <button
+                    class="btn_save"
+                    data-recipe-id="{{ recipe.id }}"
+                    onclick="saveRecipe(this)"
+                >
+                    🔖 Save Recipe
+                </button>
+
+                <a href="{% url 'recipe_detail' recipe.id %}" class="recipe_link">
+                    View Recipe →
+                </a>
+
+            </article>
+        {% empty %}
+            <p>No recipes found.</p>
+        {% endfor %}
+
+    </section>
+
+    <!-- PAGINATION ───────────────────────────────────────────────────────
+         recipes is a Page object from Paginator in views.py (6 per page) -->
+    {% if recipes.has_other_pages %}
+        <div class="pagination">
+            {% if recipes.has_previous %}
+                <a href="?page={{ recipes.previous_page_number }}">← Prev</a>
+            {% endif %}
+            <span>Page {{ recipes.number }} of {{ recipes.paginator.num_pages }}</span>
+            {% if recipes.has_next %}
+                <a href="?page={{ recipes.next_page_number }}">Next →</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</main>
+
+<!-- SAVE RECIPE SCRIPT ───────────────────────────────────────────────────────
+     Sends POST to /api/saved-recipes/ → save_recipe view → SavedRecipe table -->
+<script>
+    const USER_ID = 1; // ← replace with {{ request.user.id }} when auth is ready
+
+    async function saveRecipe(btn) {
+        const recipeId = btn.dataset.recipeId;
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+
+        try {
+            const response = await fetch("{% url 'save_recipe' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'), // required by Django for POST
+                },
+                body: JSON.stringify({ recipe_id: recipeId, user_id: USER_ID }),
+            });
+
+            if (!response.ok) throw new Error('Save failed');
+            const data = await response.json();
+            btn.textContent = data.created ? '✓ Saved!' : 'Already Saved';
+            if (data.created) btn.classList.add('btn_save_done');
+
+        } catch (err) {
+            console.error(err);
+            btn.disabled = false;
+            btn.textContent = '🔖 Save Recipe';
+            alert('Could not save. Is Django running?');
+        }
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+</script>
+
+{% endblock %}

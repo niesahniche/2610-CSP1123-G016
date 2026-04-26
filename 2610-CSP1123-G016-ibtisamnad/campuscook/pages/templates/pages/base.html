@@ -1,0 +1,29 @@
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Cook</title>
+    <script src="{% static 'pages/js.js' %}" defer></script>
+    <link rel="stylesheet" href="{% static 'pages/style.css' %}">
+</head>
+<body>
+
+    <nav>
+        <ul>
+            <!-- each {% url 'name' %} must match a name= in urls.py -->
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'grocery' %}">Grocery</a></li>
+            <li><a href="{% url 'about' %}">About</a></li>
+            <li><a href="{% url 'check' %}">Check Recipe</a></li>
+            <li><a href="{% url 'recipe_list' %}">Recipes</a></li>
+        </ul>
+    </nav>
+
+    {% block content %}
+    <!-- child pages replace this block with their own content -->
+    {% endblock %}
+
+</body>
+</html>

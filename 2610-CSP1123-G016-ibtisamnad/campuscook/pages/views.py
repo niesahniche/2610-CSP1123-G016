@@ -4,6 +4,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.contrib import messages
+from django.contrib.auth import login, logout, authenticate
+from .models import AppUser
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 
 # ── EDIT THIS if you rename any model ──────────────────────────────────────
 # models.py has: SavedRecipe (no underscore) — make sure this matches exactly
@@ -204,3 +209,101 @@ def unsave_recipe(request, saved_recipe_id):
     obj = get_object_or_404(SavedRecipe, pk=saved_recipe_id)
     obj.delete()
     return JsonResponse({"deleted": True})
+
+
+def signup_view(request):
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()  # saves into AppUser
+            login(request, user)  # logs them in immediately
+            return redirect("home")  # replace with your homepage URL name
+    else:
+        form = UserCreationForm()
+    return render(request, "registration/signup.html", {"form": form})
+    """
+    Signup view: accepts new user details from the form.
+    Since there's no real DB yet, it checks against HARDCODED_USERS
+    using email + password1, then logs the matched user in.
+    """
+    if request.user.is_authenticated:
+        return redirect("home")
+
+    if request.method == "POST":
+        email     = request.POST.get("email", "").strip()
+        password1 = request.POST.get("password1", "").strip()
+        password2 = request.POST.get("password2", "").strip()
+
+        # Basic validation
+        if not email or not password1:
+            messages.error(request, "Email and password are required.")
+            return render(request, "signup.html")
+
+        if password1 != password2:
+            messages.error(request, "Passwords do not match.")
+            return render(request, "signup.html")
+
+        # Check if user already exists
+        if AppUser.objects.filter(email=email).exists():
+            messages.error(request, "A user with this email already exists.")
+            return render(request, "signup.html")
+
+        # Create the new user
+        user = AppUser.objects.create_user(
+            username=email.split("@")[0],
+            email=email,
+            password=password1
+        )
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        messages.success(request, f"Welcome, {user.first_name}! You're now signed in.")
+        return redirect("home")
+    return render(request, "signup.html")
+
+
+def login_view(request):
+    """
+    Login view: accepts email (entered in the username field) + password.
+    Checks against hardcoded users, then logs in via Django's auth system.
+    """
+    if request.user.is_authenticated:
+        return redirect("home")
+
+    if request.method == "POST":
+        email    = request.POST.get("username", "").strip()   # field is named 'username' in the form
+        password = request.POST.get("password", "").strip()
+
+        # Use Django's built-in authentication
+        user = authenticate(request, username=email, password=password)
+
+        if user:
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            messages.success(request, f"Welcome back, {user.first_name}!")
+            return redirect("home")
+        else:
+                messages.error(request, "Account setup incomplete. Please contact support.")
+
+    return render(request, "login.html")
+
+
+def logout_view(request):
+    """Logs out via POST only (protects against accidental/CSRF logouts)."""
+    if request.method == "POST":
+        logout(request)
+        messages.success(request, "You have been logged out successfully.")
+        return redirect("login")
+    # GET requests just go home
+    return redirect("home")
+
+
+@login_required
+def home(request):
+    return render(request, "home.html")
+
+
+@login_required
+def profile(request):
+    """
+    Profile view — renders user info from request.user.
+    request.user is populated automatically by Django's auth middleware.
+    """
+    return render(request, "user_profile.html", {"user": request.user})

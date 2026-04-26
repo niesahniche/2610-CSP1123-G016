@@ -1,12 +1,13 @@
 from django.db import models
-
+from django.contrib.auth.models import AbstractUser, UserManager
+# Remove CustomIngredient
 # Create your models here.
-class AppUser(models.Model):
-    username = models.CharField(max_length=100, unique=True)
+class AppUser(AbstractUser):
     age = models.IntegerField(null=True, blank=True)
     password = models.CharField(max_length=100)
     def __str__(self):
         return self.username
+    objects = UserManager()
     
 class RecipeFilter(models.Model):
     name = models.CharField(max_length=100)
@@ -25,7 +26,7 @@ class Recipe(models.Model):
     appliance = models.CharField(max_length=100)
     instructions = models.TextField()
     filters = models.ManyToManyField(RecipeFilter, blank=True, null=True)
-    user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
+    user = models.ForeignKey("pages.AppUser", on_delete=models.CASCADE)
     def __str__(self):
         return self.name
     
@@ -38,18 +39,18 @@ class CustomIngredient(models.Model):
 class Grocery(models.Model):
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, null=True, blank=True)
     custom_name = models.CharField(max_length=100, null=True, blank=True)
-    user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
+    user = models.ForeignKey("pages.AppUser", on_delete=models.CASCADE)
     def __str__(self):
         return self.ingredient.name if self.ingredient else self.custom_name
 
 class SavedRecipe(models.Model):
-    user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
+    user = models.ForeignKey("pages.AppUser", on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     def __str__(self):
         return f"{self.user.username} saved {self.recipe.name}"
 
 class Comment(models.Model):
-    user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
+    user = models.ForeignKey("pages.AppUser", on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     commentary = models.TextField()
     def __str__(self):

@@ -1,0 +1,256 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<!-- ── Profile Banner ─────────────────────────────────────────────────────
+     background colour only — no data needed from database                -->
+<div class="profile-banner"></div>
+
+<!-- ── Profile Header ────────────────────────────────────────────────────
+     user → AppUser object passed from profile view in views.py
+     view:  def profile(request): return render(request, ..., {'user': appuser})  -->
+<div class="profile-header">
+  <div class="avatar-wrapper">
+    <div class="avatar" id="avatarDisplay">
+      <img id="avatarImg" src="" alt="Profile"/>
+      <!-- default emoji avatar — replaced when user uploads a photo -->
+      <span id="avatarEmoji">🐶</span>
+    </div>
+    <label class="avatar-edit-btn" title="Change photo">
+      ✏️
+      <!-- file input — triggers changeAvatar() JS function below -->
+      <input type="file" accept="image/*" style="display:none" onchange="changeAvatar(event)"/>
+    </label>
+  </div>
+
+  <div class="profile-info-row">
+    <div class="profile-name">
+      <!-- user.username → AppUser.username field from database
+           user.email    → add email field to AppUser model when ready -->
+      <h1 id="displayName">{{ user.username }}</h1>
+      <span id="displayEmail">
+        <!-- uncomment when email field added to AppUser model:
+             {{ user.email }} -->
+        <!-- placeholder for now -->
+        {{ user.username }}
+      </span>
+    </div>
+
+    <div class="profile-actions">
+      <!-- heart icon opens saved recipes panel -->
+      <button class="icon-btn" id="heartBtn" onclick="openFavourites()" title="My Saved Recipes">
+        ♡
+        <span class="heart-badge" id="heartBadge">0</span>
+      </button>
+
+      <!-- basket icon — link to grocery page -->
+      <a href="{% url 'grocery' %}" class="icon-btn" title="My Grocery List">🧺</a>
+
+      <button class="btn-edit-profile" onclick="toggleEdit()">✏️ Edit Profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Profile Section ───────────────────────────────────────────────
+     POST to profile_update view — add to views.py and urls.py when ready -->
+<div class="edit-section" id="editSection">
+  <div class="edit-card">
+    <h3>Edit Profile</h3>
+
+    <!-- when backend edit is ready, wrap in a form:
+         <form method="POST" action="{% url 'profile_update' %}">
+         {% csrf_token %}                                              -->
+    <div class="edit-row">
+      <label>Name</label>
+      <!-- value pre-filled from database via {{ user.username }} -->
+      <input type="text" id="editName" value="{{ user.username }}" placeholder="Your name"/>
+    </div>
+    <div class="edit-row">
+      <label>Email</label>
+      <!-- uncomment value when email field added to AppUser:
+           value="{{ user.email }}"                                    -->
+      <input type="email" id="editEmail" value="" placeholder="Your email"/>
+    </div>
+    <div class="edit-actions">
+      <!-- saveProfile() is JS only for now — wire to backend form later -->
+      <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+      <button class="btn-cancel" onclick="toggleEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── My Recipes Section ─────────────────────────────────────────────────
+     saved_recipes → SavedRecipe rows filtered by this user
+     passed from profile view:
+       saved_recipes = SavedRecipe.objects.filter(user=appuser)         -->
+<div class="main-content">
+  <div class="section-header">
+    <h2>My Saved Recipes</h2>
+  </div>
+
+  <div class="recipes-grid" id="recipesGrid">
+
+    {% for saved in saved_recipes %}
+      <!-- saved.recipe.id   → PK of Recipe table via SavedRecipe FK
+           saved.recipe.name → name field from Recipe table            -->
+      <div
+        class="recipe-card"
+        data-name="{{ saved.recipe.name }}"
+        data-id="{{ saved.recipe.id }}"
+        onclick="window.location.href='{% url 'recipe_detail' saved.recipe.id %}'"
+      >
+        <!-- heart button to toggle favourite (JS only for now) -->
+        <button class="card-heart" onclick="event.stopPropagation(); toggleFavourite(this)">♡</button>
+        <span class="card-emoji">🍽️</span>
+        <span class="card-label">{{ saved.recipe.name }}</span>
+      </div>
+    {% empty %}
+      <p style="color:#888; font-size:0.9rem;">No saved recipes yet.
+        <a href="{% url 'recipe_list' %}">Browse recipes →</a>
+      </p>
+    {% endfor %}
+
+    <!-- add card links to recipe list -->
+    <div class="add-card" onclick="window.location.href='{% url 'recipe_list' %}'">
+      <span class="plus">+</span>
+      <span>Browse Recipes</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Favourites Panel ────────────────────────────────────────────────── -->
+<div class="fav-overlay" id="favOverlay" onclick="closeFavourites()"></div>
+<div class="fav-panel" id="favPanel">
+  <div class="fav-panel-header">
+    <h2>❤️ Favourite Recipes</h2>
+    <button class="fav-close" onclick="closeFavourites()">✕</button>
+  </div>
+  <div id="favContent">
+    <div class="fav-empty" id="favEmpty">
+      <div class="empty-icon">♡</div>
+      <p>No favourites yet.<br/>Tap ♡ on a recipe to save it here.</p>
+    </div>
+    <div class="fav-list" id="favList"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Favourites (JS only — not stored in DB yet) ───────────────────────────
+  // When SavedRecipe model is ready, wire these to API calls instead
+  const favourites = {};
+
+  function toggleFavourite(btn) {
+    const card  = btn.closest('.recipe-card');
+    const name  = card.dataset.name;
+    const emoji = card.dataset.emoji || '🍽️';
+
+    if (favourites[name]) {
+      delete favourites[name];
+      btn.textContent = '♡';
+      btn.classList.remove('active');
+      showToast(`"${name}" removed from favourites`);
+    } else {
+      favourites[name] = { name, emoji };
+      btn.textContent = '♥';
+      btn.classList.add('active');
+      showToast(`"${name}" added to favourites ❤️`);
+    }
+    updateHeartBadge();
+    renderFavList();
+  }
+
+  function updateHeartBadge() {
+    const count   = Object.keys(favourites).length;
+    const heartBtn = document.getElementById('heartBtn');
+    const badge    = document.getElementById('heartBadge');
+    if (count > 0) {
+      badge.textContent    = count;
+      badge.style.display  = 'flex';
+      heartBtn.style.color = '#e05c7a';
+      heartBtn.style.borderColor = '#e05c7a';
+    } else {
+      badge.style.display  = 'none';
+      heartBtn.style.color = '';
+      heartBtn.style.borderColor = '';
+    }
+  }
+
+  function renderFavList() {
+    const list  = document.getElementById('favList');
+    const empty = document.getElementById('favEmpty');
+    const keys  = Object.keys(favourites);
+    if (!keys.length) { empty.style.display = 'flex'; list.innerHTML = ''; return; }
+    empty.style.display = 'none';
+    list.innerHTML = keys.map(name => `
+      <div class="fav-item">
+        <span class="fav-emoji">${favourites[name].emoji}</span>
+        <span class="fav-name">${name}</span>
+        <button class="fav-remove" onclick="removeFavFromPanel('${name}')">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function removeFavFromPanel(name) {
+    document.querySelectorAll('.recipe-card').forEach(card => {
+      if (card.dataset.name === name) {
+        const btn = card.querySelector('.card-heart');
+        btn.textContent = '♡';
+        btn.classList.remove('active');
+      }
+    });
+    delete favourites[name];
+    updateHeartBadge();
+    renderFavList();
+    showToast(`"${name}" removed from favourites`);
+  }
+
+  function openFavourites()  {
+    document.getElementById('favPanel').classList.add('open');
+    document.getElementById('favOverlay').classList.add('open');
+  }
+
+  function closeFavourites() {
+    document.getElementById('favPanel').classList.remove('open');
+    document.getElementById('favOverlay').classList.remove('open');
+  }
+
+  function toggleEdit() {
+    document.getElementById('editSection').classList.toggle('open');
+  }
+
+  function saveProfile() {
+    // JS only for now — wire to a POST view when backend edit is ready
+    const name  = document.getElementById('editName').value.trim();
+    const email = document.getElementById('editEmail').value.trim();
+    if (name)  document.getElementById('displayName').textContent  = name;
+    if (email) document.getElementById('displayEmail').textContent = email;
+    toggleEdit();
+    showToast('Profile updated! ✅');
+  }
+
+  function changeAvatar(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('avatarImg');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      document.getElementById('avatarEmoji').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+
+{% endblock %}

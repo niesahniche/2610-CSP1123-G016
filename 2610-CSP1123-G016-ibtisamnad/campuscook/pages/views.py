@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
+from .forms import AppUserCreationForm
 import json
 
 from .models import Grocery, AppUser, Ingredient, Recipe, SavedRecipe
@@ -162,22 +162,17 @@ def unsave_recipe(request, saved_recipe_id):
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect('home')
-
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = AppUserCreationForm(request.POST)
         if form.is_valid():
-            # Creates AppUser row in database using AbstractUser's UserCreationForm
             user = form.save()
-            # Log user in immediately after signing up
             login(request, user)
             messages.success(request, f"Welcome, {user.username}!")
             return redirect('home')
         else:
             messages.error(request, "Please fix the errors below.")
     else:
-        form = UserCreationForm()
-
-    # form is passed to signup.html so {{ form.errors }} and field values work
+        form = AppUserCreationForm()
     return render(request, 'pages/signup.html', {'form': form})
 
 

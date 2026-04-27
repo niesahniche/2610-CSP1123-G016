@@ -30,7 +30,9 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
-AUTH_USER_MODEL = "pages.AppUser"
+AUTH_USER_MODEL = 'pages.AppUser'
+LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '/accounts/login/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',

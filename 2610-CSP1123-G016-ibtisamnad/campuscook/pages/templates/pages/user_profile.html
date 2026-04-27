@@ -49,9 +49,9 @@
 <div class="edit-section" id="editSection">
   <div class="edit-card">
     <h3>Edit Profile</h3>
-    <!-- wrap in form when profile_update view is ready:
-         <form method="POST" action="{% url 'profile_update' %}">
-         {% csrf_token %}                                                     -->
+<!-- wrap in form when profile_update view is ready:
+     <form method="POST" action="/profile/update/">
+     csrf_token goes here                                                 -->
     <div class="edit-row">
       <label>Name</label>
       <input type="text" id="editName" value="{{ user.username }}" placeholder="Your name"/>

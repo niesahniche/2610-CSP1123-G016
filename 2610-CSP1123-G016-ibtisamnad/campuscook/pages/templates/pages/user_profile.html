@@ -2,87 +2,77 @@
 
 {% block content %}
 
-<!-- ── Profile Banner ─────────────────────────────────────────────────────
-     background colour only — no data needed from database                -->
+<!-- ── Profile Banner ────────────────────────────────────────────────────── -->
 <div class="profile-banner"></div>
 
-<!-- ── Profile Header ────────────────────────────────────────────────────
-     user → AppUser object passed from profile view in views.py
-     view:  def profile(request): return render(request, ..., {'user': appuser})  -->
+<!-- ── Profile Header ────────────────────────────────────────────────────────
+     user          → request.user (AppUser) passed from profile view
+     saved_recipes → SavedRecipe queryset passed from profile view           -->
 <div class="profile-header">
   <div class="avatar-wrapper">
     <div class="avatar" id="avatarDisplay">
       <img id="avatarImg" src="" alt="Profile"/>
-      <!-- default emoji avatar — replaced when user uploads a photo -->
       <span id="avatarEmoji">🐶</span>
     </div>
     <label class="avatar-edit-btn" title="Change photo">
       ✏️
-      <!-- file input — triggers changeAvatar() JS function below -->
       <input type="file" accept="image/*" style="display:none" onchange="changeAvatar(event)"/>
     </label>
   </div>
 
   <div class="profile-info-row">
     <div class="profile-name">
-      <!-- user.username → AppUser.username field from database
-           user.email    → add email field to AppUser model when ready -->
+      <!-- user.username → AppUser.username from database -->
       <h1 id="displayName">{{ user.username }}</h1>
-      <span id="displayEmail">
-        <!-- uncomment when email field added to AppUser model:
-             {{ user.email }} -->
-        <!-- placeholder for now -->
-        {{ user.username }}
-      </span>
+      <!-- user.email → AbstractUser has email field, empty until user fills it -->
+      <span id="displayEmail">{{ user.email|default:user.username }}</span>
     </div>
 
     <div class="profile-actions">
-      <!-- heart icon opens saved recipes panel -->
-      <button class="icon-btn" id="heartBtn" onclick="openFavourites()" title="My Saved Recipes">
-        ♡
-        <span class="heart-badge" id="heartBadge">0</span>
+      <button class="icon-btn" id="heartBtn" onclick="openFavourites()" title="Favourites">
+        ♡<span class="heart-badge" id="heartBadge">0</span>
       </button>
-
-      <!-- basket icon — link to grocery page -->
       <a href="{% url 'grocery' %}" class="icon-btn" title="My Grocery List">🧺</a>
-
       <button class="btn-edit-profile" onclick="toggleEdit()">✏️ Edit Profile</button>
+
+      <!-- LOGOUT — must be POST to be secure (Django requires POST for logout) -->
+      <form method="POST" action="{% url 'logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn-logout">Logout</button>
+      </form>
     </div>
   </div>
 </div>
 
-<!-- ── Edit Profile Section ───────────────────────────────────────────────
-     POST to profile_update view — add to views.py and urls.py when ready -->
+<!-- ── Edit Profile ───────────────────────────────────────────────────────────
+     JS only for now — wire to a POST view when backend edit is ready        -->
 <div class="edit-section" id="editSection">
   <div class="edit-card">
     <h3>Edit Profile</h3>
-
-    <!-- when backend edit is ready, wrap in a form:
+    <!-- wrap in form when profile_update view is ready:
          <form method="POST" action="{% url 'profile_update' %}">
-         {% csrf_token %}                                              -->
+         {% csrf_token %}                                                     -->
     <div class="edit-row">
       <label>Name</label>
-      <!-- value pre-filled from database via {{ user.username }} -->
       <input type="text" id="editName" value="{{ user.username }}" placeholder="Your name"/>
     </div>
     <div class="edit-row">
       <label>Email</label>
-      <!-- uncomment value when email field added to AppUser:
-           value="{{ user.email }}"                                    -->
-      <input type="email" id="editEmail" value="" placeholder="Your email"/>
+      <!-- user.email → AbstractUser email field -->
+      <input type="email" id="editEmail" value="{{ user.email }}" placeholder="Your email"/>
     </div>
     <div class="edit-actions">
-      <!-- saveProfile() is JS only for now — wire to backend form later -->
       <button class="btn-save" onclick="saveProfile()">Save Changes</button>
       <button class="btn-cancel" onclick="toggleEdit()">Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- ── My Recipes Section ─────────────────────────────────────────────────
-     saved_recipes → SavedRecipe rows filtered by this user
-     passed from profile view:
-       saved_recipes = SavedRecipe.objects.filter(user=appuser)         -->
+<!-- ── My Saved Recipes Grid ─────────────────────────────────────────────────
+     saved_recipes → SavedRecipe queryset from profile view
+       filtered by: SavedRecipe.objects.filter(user=request.user)
+     saved.recipe.id   → PK of Recipe table via SavedRecipe FK
+     saved.recipe.name → name field from Recipe table                        -->
 <div class="main-content">
   <div class="section-header">
     <h2>My Saved Recipes</h2>
@@ -91,26 +81,23 @@
   <div class="recipes-grid" id="recipesGrid">
 
     {% for saved in saved_recipes %}
-      <!-- saved.recipe.id   → PK of Recipe table via SavedRecipe FK
-           saved.recipe.name → name field from Recipe table            -->
       <div
         class="recipe-card"
         data-name="{{ saved.recipe.name }}"
         data-id="{{ saved.recipe.id }}"
         onclick="window.location.href='{% url 'recipe_detail' saved.recipe.id %}'"
       >
-        <!-- heart button to toggle favourite (JS only for now) -->
         <button class="card-heart" onclick="event.stopPropagation(); toggleFavourite(this)">♡</button>
         <span class="card-emoji">🍽️</span>
         <span class="card-label">{{ saved.recipe.name }}</span>
       </div>
     {% empty %}
-      <p style="color:#888; font-size:0.9rem;">No saved recipes yet.
-        <a href="{% url 'recipe_list' %}">Browse recipes →</a>
+      <p style="color:#888; font-size:0.9rem;">
+        No saved recipes yet. <a href="{% url 'recipe_list' %}">Browse recipes →</a>
       </p>
     {% endfor %}
 
-    <!-- add card links to recipe list -->
+    <!-- clicking Browse takes user to recipe list to find and save more -->
     <div class="add-card" onclick="window.location.href='{% url 'recipe_list' %}'">
       <span class="plus">+</span>
       <span>Browse Recipes</span>
@@ -119,7 +106,7 @@
   </div>
 </div>
 
-<!-- ── Favourites Panel ────────────────────────────────────────────────── -->
+<!-- ── Favourites Panel (JS only) ────────────────────────────────────────── -->
 <div class="fav-overlay" id="favOverlay" onclick="closeFavourites()"></div>
 <div class="fav-panel" id="favPanel">
   <div class="fav-panel-header">
@@ -135,19 +122,149 @@
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<style>
+  .profile-banner { background: #006400; height: 160px; width: 100%; }
+
+  .profile-header { max-width: 900px; margin: 0 auto; padding: 0 2rem; position: relative; }
+
+  .avatar-wrapper { position: absolute; top: -130px; left: 2rem; }
+
+  .avatar {
+    width: 110px; height: 110px; border-radius: 50%;
+    border: 4px solid #fff; background: #eee;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; display: none; }
+
+  .avatar-edit-btn {
+    position: absolute; bottom: 4px; right: 4px;
+    width: 28px; height: 28px;
+    background: #7c5cbf; border: 2px solid #fff; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #fff;
+  }
+
+  .profile-info-row {
+    display: flex; align-items: flex-end;
+    justify-content: space-between;
+    padding: 1.2rem 0 1rem 140px;
+    border-bottom: 2px solid #ddd;
+    flex-wrap: wrap; gap: 0.8rem;
+  }
+
+  .profile-name h1   { font-size: 1.5rem; font-weight: 800; color: #111; }
+  .profile-name span { font-size: 0.85rem; color: #888; }
+
+  .profile-actions { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+
+  .icon-btn {
+    background: none; border: 2px solid #ddd; border-radius: 8px;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; cursor: pointer; text-decoration: none; color: inherit;
+    transition: border-color 0.2s, transform 0.15s; position: relative;
+  }
+  .icon-btn:hover { border-color: #6ac383; transform: scale(1.1); }
+
+  .heart-badge {
+    position: absolute; top: -6px; right: -6px;
+    background: #e05c7a; color: #fff; font-size: 0.6rem; font-weight: 700;
+    min-width: 16px; height: 16px; border-radius: 10px; padding: 0 3px;
+    display: none; align-items: center; justify-content: center;
+  }
+
+  .btn-edit-profile {
+    padding: 0.5rem 1.2rem; background: #96D4AA; color: #fff;
+    border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-edit-profile:hover { background: #6ac383; }
+
+  .btn-logout {
+    padding: 0.5rem 1rem; background: #fff; color: #333;
+    border: 2px solid #333; border-radius: 6px;
+    font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-logout:hover { background: #96D4AA; border-color: #96D4AA; color: #fff; }
+
+  .edit-section { max-width: 900px; margin: 0 auto; width: 100%; padding: 0 2rem; display: none; }
+  .edit-section.open { display: block; padding-top: 1.2rem; }
+
+  .edit-card { background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 1.4rem; margin-bottom: 1.2rem; }
+  .edit-card h3 { font-size: 0.85rem; font-weight: 700; color: #7c5cbf; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; }
+
+  .edit-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem; }
+  .edit-row label { width: 80px; font-size: 0.82rem; font-weight: 600; color: #555; flex-shrink: 0; }
+  .edit-row input { flex: 1; height: 36px; padding: 0 0.8rem; border: 1.5px solid #ccc; border-radius: 6px; font-size: 0.9rem; color: #111; outline: none; }
+  .edit-row input:focus { border-color: #6ac383; }
+
+  .edit-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
+
+  .btn-save { padding: 0.5rem 1.4rem; background: #96D4AA; color: #fff; border: none; border-radius: 7px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+  .btn-save:hover { background: #6ac383; }
+  .btn-cancel { padding: 0.5rem 1rem; background: #fff; color: #555; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.88rem; cursor: pointer; }
+  .btn-cancel:hover { background: #f5f5f5; }
+
+  .main-content { max-width: 900px; margin: 0 auto; width: 100%; padding: 1.6rem 2rem 3rem; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+  .section-header h2 { font-size: 1.2rem; font-weight: 800; color: #111; }
+
+  .recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.2rem; }
+
+  .recipe-card {
+    background: #fff; border: 2px solid #333; border-radius: 12px; height: 150px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; position: relative; transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .recipe-card:hover { box-shadow: 4px 4px 0 #6ac383; transform: translateY(-3px); }
+  .recipe-card .card-emoji { font-size: 2.4rem; }
+  .recipe-card .card-label { font-size: 0.85rem; font-weight: 600; color: #333; margin-top: 0.5rem; }
+
+  .card-heart { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #ccc; transition: color 0.2s, transform 0.15s; }
+  .card-heart:hover { transform: scale(1.2); }
+  .card-heart.active { color: #e05c7a; }
+
+  .add-card {
+    border: 2px dashed #bbb; border-radius: 12px; height: 150px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; color: #bbb; background: #fafafa; transition: border-color 0.2s, color 0.2s;
+  }
+  .add-card:hover { border-color: #6ac383; color: #6ac383; }
+  .add-card .plus { font-size: 2.2rem; font-weight: 300; }
+  .add-card span  { font-size: 0.78rem; margin-top: 0.3rem; }
+
+  .fav-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200; display: none; opacity: 0; transition: opacity 0.25s; }
+  .fav-overlay.open { display: block; opacity: 1; }
+
+  .fav-panel { position: fixed; top: 0; right: -380px; width: 340px; height: 100vh; background: #fff; border-left: 2px solid #333; z-index: 201; padding: 1.5rem; transition: right 0.3s ease; overflow-y: auto; display: flex; flex-direction: column; }
+  .fav-panel.open { right: 0; }
+
+  .fav-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+  .fav-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #555; }
+
+  .fav-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: #aaa; text-align: center; gap: 0.8rem; }
+  .fav-empty .empty-icon { font-size: 2.5rem; }
+
+  .fav-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0; border-bottom: 1px solid #eee; }
+  .fav-emoji { font-size: 1.4rem; }
+  .fav-name  { flex: 1; font-size: 0.9rem; font-weight: 600; color: #333; }
+  .fav-remove { background: none; border: none; cursor: pointer; color: #aaa; font-size: 0.85rem; }
+  .fav-remove:hover { color: #e05c7a; }
+
+  .toast { position: fixed; bottom: 28px; right: 28px; background: #333; color: #fff; padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; transform: none; }
+</style>
+
 <script>
-  // ── Favourites (JS only — not stored in DB yet) ───────────────────────────
-  // When SavedRecipe model is ready, wire these to API calls instead
   const favourites = {};
 
   function toggleFavourite(btn) {
     const card  = btn.closest('.recipe-card');
     const name  = card.dataset.name;
-    const emoji = card.dataset.emoji || '🍽️';
-
+    const emoji = '🍽️';
     if (favourites[name]) {
       delete favourites[name];
       btn.textContent = '♡';
@@ -164,19 +281,13 @@
   }
 
   function updateHeartBadge() {
-    const count   = Object.keys(favourites).length;
+    const count    = Object.keys(favourites).length;
     const heartBtn = document.getElementById('heartBtn');
     const badge    = document.getElementById('heartBadge');
-    if (count > 0) {
-      badge.textContent    = count;
-      badge.style.display  = 'flex';
-      heartBtn.style.color = '#e05c7a';
-      heartBtn.style.borderColor = '#e05c7a';
-    } else {
-      badge.style.display  = 'none';
-      heartBtn.style.color = '';
-      heartBtn.style.borderColor = '';
-    }
+    badge.style.display        = count > 0 ? 'flex' : 'none';
+    badge.textContent          = count;
+    heartBtn.style.color       = count > 0 ? '#e05c7a' : '';
+    heartBtn.style.borderColor = count > 0 ? '#e05c7a' : '';
   }
 
   function renderFavList() {
@@ -190,8 +301,7 @@
         <span class="fav-emoji">${favourites[name].emoji}</span>
         <span class="fav-name">${name}</span>
         <button class="fav-remove" onclick="removeFavFromPanel('${name}')">✕</button>
-      </div>
-    `).join('');
+      </div>`).join('');
   }
 
   function removeFavFromPanel(name) {
@@ -205,25 +315,14 @@
     delete favourites[name];
     updateHeartBadge();
     renderFavList();
-    showToast(`"${name}" removed from favourites`);
+    showToast(`"${name}" removed`);
   }
 
-  function openFavourites()  {
-    document.getElementById('favPanel').classList.add('open');
-    document.getElementById('favOverlay').classList.add('open');
-  }
-
-  function closeFavourites() {
-    document.getElementById('favPanel').classList.remove('open');
-    document.getElementById('favOverlay').classList.remove('open');
-  }
-
-  function toggleEdit() {
-    document.getElementById('editSection').classList.toggle('open');
-  }
+  function openFavourites()  { document.getElementById('favPanel').classList.add('open'); document.getElementById('favOverlay').classList.add('open'); }
+  function closeFavourites() { document.getElementById('favPanel').classList.remove('open'); document.getElementById('favOverlay').classList.remove('open'); }
+  function toggleEdit()      { document.getElementById('editSection').classList.toggle('open'); }
 
   function saveProfile() {
-    // JS only for now — wire to a POST view when backend edit is ready
     const name  = document.getElementById('editName').value.trim();
     const email = document.getElementById('editEmail').value.trim();
     if (name)  document.getElementById('displayName').textContent  = name;

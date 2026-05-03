@@ -124,9 +124,6 @@ def about(request):
 def grocery(request):
     return render(request, "pages/grocery.html")
 
-@login_required
-def check(request):
-    return render(request, "pages/check.html")
 
 # ── Imports for recipe views ──────────────────────────────────────────────────
 from django.http import JsonResponse
@@ -222,9 +219,3 @@ def unsave_recipe(request, saved_recipe_id):
 def remove_item(request, id):
     return redirect('grocery')
 
-
-# ── Check recipe ──────────────────────────────────────────────────────────────
-@login_required
-def check_recipe(request, recipe_id):
-    recipe = get_object_or_404(Recipe, pk=recipe_id)
-    return render(request, "pages/check.html", {"recipe": recipe})

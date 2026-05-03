@@ -1,0 +1,49 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<h2>Grocery List</h2>
+
+<!-- ADD PRESET INGREDIENT -->
+<form method="POST">
+    {% csrf_token %}
+    <select name="ingredient_id">
+        {% for ing in ingredients %}
+            <option value="{{ ing.id }}">{{ ing.name }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Add Ingredient</button>
+</form>
+
+<br>
+
+<!-- ADD CUSTOM INGREDIENT -->
+<form method="POST">
+    {% csrf_token %}
+    <input type="text" name="custom_name" placeholder="Enter custom ingredient">
+    <button type="submit">Add Custom</button>
+</form>
+
+<hr>
+
+<h3>My Grocery List</h3>
+
+<ul>
+    {% for item in groceries %}
+        <li>
+            {% if item.ingredient %}
+                {{ item.ingredient.name }}
+                <a href="{% url 'remove_item' item.id %}">Remove</a>
+            {% else %}
+                {{ item.custom_name }}
+                <a href="{% url 'remove_item' item.id %}">Remove</a>
+            {% endif %}
+        </li>
+    {% empty %}
+        <li>No items yet</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}
+
+

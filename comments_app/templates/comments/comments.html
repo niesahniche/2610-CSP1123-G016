@@ -1,0 +1,491 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<style>
+  /* ── Imports ──────────────────────────────────────────────── */
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  /* ── Tokens ───────────────────────────────────────────────── */
+  :root {
+    --cream:   #faf7f2;
+    --ink:     #1c1a17;
+    --muted:   #7a7570;
+    --border:  #e8e2d9;
+    --amber:   #96D4AA;
+    --amber-l: #f5eadb;
+    --star-on: #e8a020;
+    --star-off:#d8d0c4;
+    --danger:  #b94040;
+    --radius:  12px;
+    --shadow:  0 2px 16px rgba(28,26,23,.07);
+  }
+
+  /* ── Section wrapper ──────────────────────────────────────── */
+  .comments-section {
+    font-family: 'DM Sans', sans-serif;
+    max-width: 760px;
+    margin: 56px auto 80px;
+    padding: 0 20px;
+    color: var(--ink);
+  }
+
+  .comments-section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -.02em;
+  }
+
+  .rating-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 32px;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+
+  .rating-summary .avg-stars { font-size: 1.1rem; color: var(--star-on); letter-spacing: 1px; }
+  .rating-summary .avg-num   { font-weight: 600; color: var(--ink); font-size: 1.05rem; }
+
+  /* ── Write-a-comment form ─────────────────────────────────── */
+  .comment-form-wrap {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 28px 24px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow);
+  }
+
+  .comment-form-wrap h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    margin: 0 0 18px;
+    color: var(--ink);
+  }
+
+  /* Star picker */
+  .star-picker {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .star-picker input[type="radio"] { display: none; }
+
+  .star-picker label {
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--star-off);
+    transition: color .15s, transform .1s;
+    user-select: none;
+    line-height: 1;
+  }
+
+  /* Fill stars on hover / selected (row-reverse trick) */
+  .star-picker label:hover,
+  .star-picker label:hover ~ label,
+  .star-picker input:checked ~ label {
+    color: var(--star-on);
+    transform: scale(1.12);
+  }
+
+  .comment-textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .95rem;
+    resize: vertical;
+    background: #fff;
+    color: var(--ink);
+    box-sizing: border-box;
+    transition: border-color .2s;
+    outline: none;
+  }
+  .comment-textarea:focus { border-color: var(--amber); }
+
+  .char-count {
+    font-size: .78rem;
+    color: var(--muted);
+    text-align: right;
+    margin: 4px 0 14px;
+  }
+
+  .btn-submit {
+    background: var(--amber);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+    letter-spacing: .01em;
+  }
+  .btn-submit:hover   { background: #6ac383; }
+  .btn-submit:active  { transform: scale(.97); }
+  .btn-submit:disabled{ background: var(--star-off); cursor: not-allowed; }
+
+  .form-msg {
+    font-size: .85rem;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .form-msg.ok  { color: #4a7c4e; }
+  .form-msg.err { color: var(--danger); }
+
+  /* ── Comment cards list ───────────────────────────────────── */
+  .comment-list { display: flex; flex-direction: column; gap: 20px; }
+
+  .comment-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+    position: relative;
+    animation: fadeUp .3s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .comment-card.own {
+    border-color: var(--amber);
+    background: var(--amber-l);
+  }
+
+  .comment-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .comment-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--amber);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: .9rem;
+    flex-shrink: 0;
+  }
+
+  .comment-meta { flex: 1; }
+
+  .comment-username {
+    font-weight: 500;
+    font-size: .95rem;
+    display: block;
+  }
+
+  .comment-date {
+    font-size: .78rem;
+    color: var(--muted);
+  }
+
+  .comment-stars {
+    color: var(--star-on);
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+
+  .comment-body {
+    font-size: .92rem;
+    line-height: 1.65;
+    color: #3a3630;
+    margin-top: 6px;
+  }
+
+  .btn-delete {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: .78rem;
+    cursor: pointer;
+    padding: 3px 8px;
+    transition: color .15s, border-color .15s;
+  }
+  .btn-delete:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+
+  .no-comments {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: .95rem;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+  }
+
+  .comments-loading {
+    text-align: center;
+    color: var(--muted);
+    padding: 24px;
+    font-size: .9rem;
+  }
+</style>
+
+<!-- ── Comments Section ──────────────────────────────────────────────────── -->
+<section class="comments-section" id="comments-section">
+
+  <h2>Reviews</h2>
+  <div class="rating-summary" id="rating-summary">
+    <span class="avg-stars">☆☆☆☆☆</span>
+    <span class="avg-num">–</span>
+    <span id="count-label">No reviews yet</span>
+  </div>
+
+  <!-- Write a comment (only shown to logged-in users) -->
+  {% if user.is_authenticated %}
+  <div class="comment-form-wrap">
+    <h3 id="form-title">Leave a Review</h3>
+
+    <!-- Star rating picker -->
+    <div class="star-picker" id="star-picker" role="group" aria-label="Star rating">
+      {% for i in "54321" %}
+        <input type="radio" name="rating" id="star-{{ i }}" value="{{ i }}">
+        <label for="star-{{ i }}" title="{{ i }} star{% if i != '1' %}s{% endif %}">★</label>
+      {% endfor %}
+    </div>
+
+    <textarea
+      class="comment-textarea"
+      id="comment-body"
+      placeholder="Share your thoughts on this recipe…"
+      maxlength="1000"
+    ></textarea>
+    <div class="char-count"><span id="char-used">0</span> / 1000</div>
+
+    <button class="btn-submit" id="submit-btn" onclick="submitComment()">Post Review</button>
+    <p class="form-msg" id="form-msg"></p>
+  </div>
+  {% else %}
+  <div class="comment-form-wrap" style="text-align:center; color:var(--muted);">
+    <a href="{% url 'login' %}?next={{ request.path }}" style="color:var(--amber); font-weight:500;">
+      Sign in
+    </a> to leave a review.
+  </div>
+  {% endif %}
+
+  <!-- Comment list -->
+  <div class="comment-list" id="comment-list">
+    <p class="comments-loading">Loading reviews…</p>
+  </div>
+
+</section>
+
+<script>
+  // ── Config ────────────────────────────────────────────────────────────────
+  const RECIPE_ID      = {{ recipe.id }};
+  const LIST_URL       = `/api/comments/${RECIPE_ID}/`;
+  const CREATE_URL     = `/api/comments/${RECIPE_ID}/create/`;
+  const DELETE_BASE    = `/api/comments/delete/`;
+  const CURRENT_USER   = "{{ user.username|escapejs }}";
+  const IS_AUTH        = {{ user.is_authenticated|yesno:"true,false" }};
+
+  let userCommentId = null;   // tracks if the logged-in user already commented
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function getCookie(name) {
+    const val   = `; ${document.cookie}`;
+    const parts = val.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  function starsHtml(rating) {
+    return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  }
+
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString('en-MY', {
+      day:'numeric', month:'short', year:'numeric'
+    });
+  }
+
+  function avatarLetter(username) {
+    return (username || '?')[0].toUpperCase();
+  }
+
+  // ── Load comments ─────────────────────────────────────────────────────────
+  async function loadComments() {
+    const listEl    = document.getElementById('comment-list');
+    const summaryEl = document.getElementById('rating-summary');
+
+    try {
+      const res  = await fetch(LIST_URL);
+      const data = await res.json();
+
+      userCommentId = data.user_comment_id;
+
+      // Update summary bar
+      if (data.average_rating) {
+        const filled = Math.round(data.average_rating);
+        document.querySelector('.avg-stars').textContent = starsHtml(filled);
+        document.querySelector('.avg-num').textContent   = data.average_rating + ' / 5';
+        document.getElementById('count-label').textContent =
+          `${data.count} review${data.count !== 1 ? 's' : ''}`;
+      } else {
+        document.getElementById('count-label').textContent = 'No reviews yet';
+      }
+
+      // Adjust form title if user already commented
+      if (IS_AUTH && userCommentId) {
+        const t = document.getElementById('form-title');
+        if (t) t.textContent = 'Edit Your Review';
+        const b = document.getElementById('submit-btn');
+        if (b) b.textContent = 'Update Review';
+
+        // Pre-fill form with existing values
+        const own = data.comments.find(c => c.id === userCommentId);
+        if (own) {
+          const radio = document.querySelector(`input[name="rating"][value="${own.rating}"]`);
+          if (radio) radio.checked = true;
+          const ta = document.getElementById('comment-body');
+          if (ta) { ta.value = own.body; updateCharCount(); }
+        }
+      }
+
+      // Render cards
+      if (!data.comments.length) {
+        listEl.innerHTML = '<div class="no-comments">No reviews yet — be the first!</div>';
+        return;
+      }
+
+      listEl.innerHTML = data.comments.map(c => {
+        const isOwn    = IS_AUTH && c.id === userCommentId;
+        const delBtn   = isOwn
+          ? `<button class="btn-delete" onclick="deleteComment(${c.id})" title="Delete your review">✕ Delete</button>`
+          : '';
+        return `
+          <div class="comment-card ${isOwn ? 'own' : ''}" id="card-${c.id}">
+            ${delBtn}
+            <div class="comment-header">
+              <div class="comment-avatar">${avatarLetter(c.username)}</div>
+              <div class="comment-meta">
+                <span class="comment-username">${esc(c.username)}</span>
+                <span class="comment-date">${formatDate(c.created_at)}</span>
+              </div>
+              <div class="comment-stars">${starsHtml(c.rating)}</div>
+            </div>
+            <p class="comment-body">${esc(c.body)}</p>
+          </div>`;
+      }).join('');
+
+    } catch (err) {
+      listEl.innerHTML = '<p style="color:var(--danger)">Could not load reviews.</p>';
+      console.error(err);
+    }
+  }
+
+  // ── Submit / update comment ────────────────────────────────────────────────
+  async function submitComment() {
+    const msgEl   = document.getElementById('form-msg');
+    const btn     = document.getElementById('submit-btn');
+    const body    = document.getElementById('comment-body').value.trim();
+    const ratingEl = document.querySelector('input[name="rating"]:checked');
+
+    msgEl.className = 'form-msg';
+    msgEl.textContent = '';
+
+    if (!ratingEl) { msgEl.className = 'form-msg err'; msgEl.textContent = 'Please choose a star rating.'; return; }
+    if (!body)     { msgEl.className = 'form-msg err'; msgEl.textContent = 'Please write a short review.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Posting…';
+
+    try {
+      const res = await fetch(CREATE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ rating: parseInt(ratingEl.value), body }),
+      });
+
+      if (!res.ok) throw new Error('Server error');
+
+      msgEl.className   = 'form-msg ok';
+      msgEl.textContent = 'Review posted!';
+      await loadComments();      // refresh list + summary
+
+    } catch (err) {
+      msgEl.className   = 'form-msg err';
+      msgEl.textContent = 'Could not post. Please try again.';
+      console.error(err);
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = userCommentId ? 'Update Review' : 'Post Review';
+    }
+  }
+
+  // ── Delete comment ────────────────────────────────────────────────────────
+  async function deleteComment(commentId) {
+    if (!confirm('Delete your review?')) return;
+    try {
+      const res = await fetch(`${DELETE_BASE}${commentId}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      });
+      if (!res.ok) throw new Error('Delete failed');
+
+      userCommentId = null;
+      // Reset form
+      const t = document.getElementById('form-title');
+      if (t) t.textContent = 'Leave a Review';
+      const b = document.getElementById('submit-btn');
+      if (b) b.textContent = 'Post Review';
+      const ta = document.getElementById('comment-body');
+      if (ta) { ta.value = ''; updateCharCount(); }
+      const checked = document.querySelector('input[name="rating"]:checked');
+      if (checked) checked.checked = false;
+
+      await loadComments();
+
+    } catch (err) {
+      alert('Could not delete. Try again.');
+      console.error(err);
+    }
+  }
+
+  // ── Char counter ──────────────────────────────────────────────────────────
+  function updateCharCount() {
+    const ta  = document.getElementById('comment-body');
+    const cnt = document.getElementById('char-used');
+    if (ta && cnt) cnt.textContent = ta.value.length;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const ta = document.getElementById('comment-body');
+    if (ta) ta.addEventListener('input', updateCharCount);
+    loadComments();
+  });
+</script>
+
+{% endblock %}

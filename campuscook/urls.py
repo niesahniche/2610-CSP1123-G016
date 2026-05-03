@@ -22,5 +22,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('accounts.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),  # login/logout built-in
+    path('', include('comments_app.urls')),
 ]

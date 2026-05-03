@@ -1,0 +1,152 @@
+<!--- hardcode only the layout and let the details appear later once database and id for recipes are given-->
+<!--- need : title, description, ingredients, time, cost/budget, instructions, appliances used, rating -->
+<!--- cannot be fully hardcoded as it needs recipe.id (Primary key) to show specific details -->
+<!--- have not been linked yet as data is not proper (no primary key in hardcoded recipe_list) -->
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<main class="recipe_detail">
+
+    <!-- BACK NAVIGATION ─────────────────────────────────────────────────── -->
+    <nav class="detail_nav">
+        <a href="{% url 'recipe_list' %}" class="back_link">← Back to Recipes</a>
+        <a href="{% url 'recipe_filter' %}" class="filter_link">Filter Recipes</a>
+    </nav>
+
+    <article class="detail_card">
+
+        <div class="detail_body">
+
+            <!-- TITLE + SAVE BUTTON ─────────────────────────────────────────
+                 recipe.name → name field from Recipe table (not 'title')
+                 recipe.id   → PK from Recipe table, passed to save button   -->
+            <div class="detail_title_row">
+                <h1 class="detail_title">{{ recipe.name }}</h1>
+
+                <!-- SAVE BUTTON ─────────────────────────────────────────────
+                     data-recipe-id="{{ recipe.id }}" → Recipe table PK
+                     clicking sends POST /api/saved-recipes/ → save_recipe view
+                     Django creates: SavedRecipe(recipe=recipe, user=user)    -->
+                <button
+                    class="btn_save"
+                    data-recipe-id="{{ recipe.id }}"
+                    onclick="saveRecipe(this)"
+                >
+                    🔖 Save Recipe
+                </button>
+            </div>
+
+            <!-- TAGS ROW ────────────────────────────────────────────────────
+                 cooking_time → IntegerField in Recipe table
+                 appliance    → CharField in Recipe table
+
+                 ── fields below don't exist in models.py yet ────────────────
+                 category, budget, is_halal are commented out until you add
+                 them to Recipe model and run migrations                      -->
+            <div class="detail_tags">
+
+                <!-- cooking_time → Recipe table IntegerField -->
+                <span class="recipe_time">
+                    ⏱ {{ recipe.cooking_time }} mins
+                </span>
+
+                <!-- appliance → Recipe table CharField -->
+                <span class="recipe_appliance">
+                    🔧 {{ recipe.appliance }}
+                </span>
+
+                <!-- ── uncomment when added to models.py ──────────────────
+                <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}"
+                    class="recipe_category tag_link">
+                    📂 {{ recipe.get_category_display }}
+                </a>
+                <a href="{% url 'recipe_filter' %}?budget={{ recipe.budget }}"
+                    class="recipe_budget tag_link">
+                    💰 {{ recipe.get_budget_display }}
+                </a>
+                {% if recipe.is_halal %}
+                    <a href="{% url 'recipe_filter' %}?halal=true" class="recipe_halal tag_link">✅ Halal</a>
+                {% else %}
+                    <a href="{% url 'recipe_filter' %}?halal=false" class="recipe_nonhalal tag_link">❌ Non-Halal</a>
+                {% endif %}
+                ─────────────────────────────────────────────────────────── -->
+
+            </div>
+
+            <!-- INGREDIENTS SECTION ─────────────────────────────────────────
+                 recipe.ingredients → ManyToManyField to Ingredient table
+                 loops through all Ingredient rows linked to this recipe      -->
+            <section class="detail_section">
+                <h2 class="section_title">Ingredients 🛒</h2>
+                <ul>
+                    {% for ingredient in recipe.ingredients.all %}
+                        <!-- ingredient.name → name field from Ingredient table -->
+                        <li>{{ ingredient.name }}</li>
+                    {% empty %}
+                        <li>No ingredients listed.</li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <!-- INSTRUCTIONS SECTION ────────────────────────────────────────
+                 recipe.instructions → TextField from Recipe table            -->
+            <section class="detail_section">
+                <h2 class="section_title">Instructions 👩‍🍳</h2>
+                <p class="detail_instructions">{{ recipe.instructions }}</p>
+            </section>
+
+            <!-- BOTTOM NAVIGATION ───────────────────────────────────────────-->
+            <div class="detail_footer_links">
+                <a href="{% url 'recipe_list' %}" class="back_link">← Back to All Recipes</a>
+                <a href="{% url 'recipe_filter' %}" class="filter_link">Filter Recipes →</a>
+            </div>
+
+        </div>
+    </article>
+
+    {% include "comments/comments.html" %}
+
+</main>
+
+<!-- SAVE RECIPE SCRIPT ───────────────────────────────────────────────────────
+     Same script as recipe_list.html — sends POST to save_recipe view        -->
+<script>
+    const USER_ID = 1; // ← replace with {{ request.user.id }} when auth is ready
+
+    async function saveRecipe(btn) {
+        const recipeId = btn.dataset.recipeId; // {{ recipe.id }} injected by Django
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+
+        try {
+            const response = await fetch("{% url 'save_recipe' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ recipe_id: recipeId, user_id: USER_ID }),
+            });
+
+            if (!response.ok) throw new Error('Save failed');
+            const data = await response.json();
+            btn.textContent = data.created ? '✓ Saved!' : 'Already Saved';
+            if (data.created) btn.classList.add('btn_save_done');
+
+        } catch (err) {
+            console.error(err);
+            btn.disabled = false;
+            btn.textContent = '🔖 Save Recipe';
+            alert('Could not save. Is Django running?');
+        }
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+</script>
+
+{% endblock %}

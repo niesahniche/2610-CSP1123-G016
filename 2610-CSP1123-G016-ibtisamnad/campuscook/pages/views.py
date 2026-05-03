@@ -6,13 +6,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from .forms import AppUserCreationForm
+from .forms import AppUserCreationForm, RecipeForm
 import json
 
-from .models import Grocery, AppUser, Ingredient, Recipe, SavedRecipe
+from .models import Grocery, AppUser, Recipe, SavedRecipe
 
 
-# ── Home — public, no login required ─────────────────────────────────────────
+# ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
     return render(request, "pages/home.html")
 
@@ -24,16 +24,22 @@ def about(request):
 
 # ── Check recipe ──────────────────────────────────────────────────────────────
 def check(request):
-    recipes = Recipe.objects.all()
-    return render(request, "pages/check.html", {'recipes': recipes})
+    return render(request, "pages/check.html", {'recipes': Recipe.objects.all()})
 
 
 def check_recipe(request, recipe_id):
-    user = request.user if request.user.is_authenticated else AppUser.objects.first()
+    user   = request.user if request.user.is_authenticated else AppUser.objects.first()
     recipe = get_object_or_404(Recipe, id=recipe_id)
+
+    # recipe_ingredients → Grocery items linked to this recipe via ManyToMany
     recipe_ingredients = recipe.ingredients.all()
-    my_groceries = Ingredient.objects.filter(grocery__user=user)
-    missing = recipe_ingredients.exclude(id__in=my_groceries)
+
+    # my_groceries → Grocery items owned by this user
+    my_groceries = Grocery.objects.filter(user=user, status='available')
+
+    # missing → recipe ingredients NOT in user's grocery list
+    missing = recipe_ingredients.exclude(id__in=my_groceries.values_list('id', flat=True))
+
     return render(request, 'pages/check.html', {
         'recipe':  recipe,
         'missing': missing,
@@ -46,22 +52,24 @@ def grocery(request):
     user = request.user if request.user.is_authenticated else AppUser.objects.first()
 
     if request.method == "POST":
-        if 'ingredient_id' in request.POST:
-            ingredient = get_object_or_404(Ingredient, id=request.POST.get('ingredient_id'))
-            Grocery.objects.create(user=user, ingredient=ingredient)
-        elif 'custom_name' in request.POST:
-            name = request.POST.get('custom_name', '').strip()
-            if name:
-                Grocery.objects.create(user=user, custom_name=name)
+        # name comes from the text input in grocery.html
+        name = request.POST.get('name', '').strip()
+        custom_name = request.POST.get('custom_name', '').strip()
+        if name:
+            Grocery.objects.create(user=user, name=name, custom_name=custom_name or None, status='available')
         return redirect('grocery')
 
+    # groceries → all Grocery rows belonging to this user
+    available = Grocery.objects.filter(user=user, status='available')
+    missing = Grocery.objects.filter(user=user, status='missing')
     return render(request, 'pages/grocery.html', {
-        'groceries':   Grocery.objects.filter(user=user),
-        'ingredients': Ingredient.objects.all(),
+        'available': available,
+        'missing': missing,
     })
 
 
 def remove_item(request, id):
+    # id → PK of Grocery row to delete
     Grocery.objects.filter(id=id).delete()
     return redirect('grocery')
 
@@ -69,13 +77,25 @@ def remove_item(request, id):
 # ── Recipe list ───────────────────────────────────────────────────────────────
 def recipe_list(request):
     recipes = Recipe.objects.all()
-    search = request.GET.get('search', '')
+    search  = request.GET.get('search', '')
+
     if search:
         recipes = recipes.filter(name__icontains=search)
     paginator = Paginator(recipes, 6)
     recipes   = paginator.get_page(request.GET.get('page'))
-    return render(request, 'pages/recipe_list.html', {'recipes': recipes})
 
+    if request.user.is_authenticated:
+        saved_ids = set(
+            SavedRecipe.objects.filter(user=request.user)
+            .values_list('recipe_id', flat=True)
+        )
+    else:
+        saved_ids = set()
+ 
+    return render(request, 'pages/recipe_list.html', {
+        'recipes':   recipes,
+        'saved_ids': list(saved_ids),
+    })
 
 # ── Recipe filter ─────────────────────────────────────────────────────────────
 def recipe_filter(request):
@@ -97,18 +117,109 @@ def recipe_filter(request):
     elif time == 'long':
         recipes = recipes.filter(cooking_time__gt=30)
 
-    # ── add category/budget/halal filters here once added to models.py ───────
-
     return render(request, 'pages/recipe_filter.html', {'recipes': recipes})
 
 
 # ── Recipe detail ─────────────────────────────────────────────────────────────
 def recipe_detail(request, id):
     recipe = get_object_or_404(Recipe, id=id)
-    return render(request, 'pages/recipe_detail.html', {'recipe': recipe})
+    is_saved = (
+        request.user.is_authenticated and
+        SavedRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+    )
+    return render(request, 'pages/recipe_detail.html', {
+        'recipe':   recipe,
+        'is_saved': is_saved,
+    })
 
+# ── Add recipe ────────────────────────────────────────────────────────────────
+@login_required
+def add_recipe(request):
+    user = request.user
 
-# ── Saved recipes page (HTML shell) ──────────────────────────────────────────
+    if request.method == 'POST':
+        form = RecipeForm(request.POST)
+
+        # set the ingredients queryset to this user's groceries
+        form.fields['ingredients'].queryset = Grocery.objects.filter(user=user, status='available')
+
+        if form.is_valid():
+            # create the Recipe row but don't save to DB yet (commit=False)
+            # so we can set the user FK first
+            recipe = form.save(commit=False)
+            recipe.user = user  # FK → AppUser who created this recipe
+            recipe.save()
+
+            # save ManyToMany (ingredients) — must be done AFTER recipe.save()
+            form.save_m2m()
+
+            messages.success(request, f'"{recipe.name}" has been added!')
+
+            # redirect to the new recipe's detail page
+            return redirect('recipe_detail', id=recipe.id)
+        else:
+            messages.error(request, 'Please fix the errors below.')
+
+    else:
+        form = RecipeForm()
+        form.fields['ingredients'].queryset = Grocery.objects.filter(user=user, status='available')
+
+    # groceries → passed to template for the checkbox list
+    groceries = Grocery.objects.filter(user=user, status='available')
+
+    return render(request, 'pages/add_recipe.html', {
+        'form':      form,
+        'groceries': groceries,
+    })
+
+# ── To Make API ───────────────────────────────────────────────────────────────
+# Called when user clicks "To Make" on a saved recipe card.
+# Checks which recipe ingredients the user already has (status='available')
+# vs which are missing, then auto-adds missing ones to the Grocery table
+# with status='missing' and a note linking back to the recipe name.
+@csrf_exempt
+@require_http_methods(['POST'])
+def to_make(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    user   = request.user if request.user.is_authenticated else AppUser.objects.first()
+ 
+    recipe_ingredients = recipe.ingredients.all()
+ 
+    # available → recipe ingredients the user already has in their grocery list
+    my_available = Grocery.objects.filter(user=user, status='available')
+    available    = recipe_ingredients.filter(id__in=my_available.values_list('id', flat=True))
+ 
+    # missing → recipe ingredients NOT in user's available grocery list
+    missing = recipe_ingredients.exclude(id__in=my_available.values_list('id', flat=True))
+ 
+    # auto-add missing ingredients to Grocery table with status='missing'
+    # skip if already added as missing for this recipe to avoid duplicates
+    added = []
+    for ing in missing:
+        already_missing = Grocery.objects.filter(
+            user=user,
+            name=ing.name,
+            status='missing',
+            for_recipe=recipe.name
+        ).exists()
+        if not already_missing:
+            Grocery.objects.create(
+                user=user,
+                name=ing.name,
+                status='missing',
+                for_recipe=recipe.name,  # note links missing item to recipe
+            )
+            added.append(ing.name)
+ 
+    return JsonResponse({
+        'can_cook':  missing.count() == 0,
+        'available': [g.name for g in available],
+        'missing':   [g.name for g in missing],
+        'added':     added,
+        'recipe':    recipe.name,
+    })
+
+# ── Saved recipes page ────────────────────────────────────────────────────────
 def saved_recipes(request):
     return render(request, 'pages/saved_recipes.html')
 
@@ -116,7 +227,6 @@ def saved_recipes(request):
 # ── Saved recipes API — GET ───────────────────────────────────────────────────
 @require_http_methods(['GET'])
 def saved_recipe_list(request):
-    # Filter by logged-in user; fall back to all for testing
     if request.user.is_authenticated:
         saved = SavedRecipe.objects.select_related('recipe').filter(user=request.user)
     else:
@@ -185,11 +295,9 @@ def logout_view(request):
     return redirect('home')
 
 
-# ── Profile — requires login ──────────────────────────────────────────────────
+# ── Profile ───────────────────────────────────────────────────────────────────
 @login_required
 def profile(request):
-    # saved_recipes → SavedRecipe rows for this user, joined with Recipe table
-    # passed to user_profile.html as {{ saved_recipes }} for the recipe grid
     saved = SavedRecipe.objects.select_related('recipe').filter(user=request.user)
     return render(request, 'pages/user_profile.html', {
         'user':          request.user,

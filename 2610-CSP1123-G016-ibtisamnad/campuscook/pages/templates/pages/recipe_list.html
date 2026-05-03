@@ -58,7 +58,6 @@
                      onclick sends POST to /api/saved-recipes/
                      Django stores: SavedRecipe(recipe_id=recipe.id, user=user) -->
                 <div class="card_actions">
-                    <a href="{% url 'check_recipe' recipe.id %}" class="btn_action btn_check">✅ Can I cook this?</a>
 
                     {% if user.is_authenticated %}
                     <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="toMake(this)">🍳 To Make</button>

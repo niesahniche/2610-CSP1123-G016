@@ -135,7 +135,7 @@
                 </p>
             {% endif %}
         </div>
-        <!-- CUSTOM INGREDIENTS — type new ones not yet in grocery list -->
+        <!-- CUSTOM INGREDIENTS — the custom ingredient separated by commas input -->
         <div class="form_group">
             <label for="custom_ingredients">Add new ingredients</label>
             <p class="form_hint">
@@ -147,6 +147,7 @@
                 id="custom_ingredients"
                 name="custom_ingredients"
                 placeholder="e.g. Garlic, Olive Oil, Chilli flakes"
+                value="{{ custom_ingredients_value|default:'' }}"
             />
             <div id="custom_preview" class="custom_preview"></div>
         </div>
@@ -314,11 +315,16 @@
 </style>
 
 <script>
-    document.getElementById('custom_ingredients').addEventListener('input', function () {
+    const customIngredientsInput = document.getElementById('custom_ingredients');
+
+    function renderCustomPreview() {
         const preview = document.getElementById('custom_preview');
-        const names   = this.value.split(',').map(s => s.trim()).filter(Boolean);
+        const names   = customIngredientsInput.value.split(',').map(s => s.trim()).filter(Boolean);
         preview.innerHTML = names.map(n => `<span class="custom_tag">+ ${n}</span>`).join('');
-    });
+    }
+
+    customIngredientsInput.addEventListener('input', renderCustomPreview);
+    renderCustomPreview();
 </script>
 
 {% endblock %}

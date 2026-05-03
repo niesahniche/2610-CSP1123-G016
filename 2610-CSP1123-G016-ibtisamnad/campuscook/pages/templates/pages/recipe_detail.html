@@ -24,7 +24,6 @@
             <div class="detail_title_row">
                 <h1 class="detail_title">{{ recipe.name }}</h1>
                 <div class="detail_actions">
-                    <a href="{% url 'check_recipe' recipe.id %}" class="btn_action btn_check">✅ Can I cook this?</a>
                     {% if user.is_authenticated %}
                     <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="toMake(this)">🍳 To Make</button>
                     {% endif %}
@@ -87,6 +86,20 @@
                         <li>No ingredients listed.</li>
                     {% endfor %}
                 </ul>
+            </section>
+
+            <!-- MISSING INGREDIENTS DISPLAY -->
+            <section class="detail_section ingredient-section missing">
+                <h2 class="section_title">Missing ingredients you don't have</h2>
+                {% if missing_ingredients %}
+                    <ul class="ingredient-list">
+                        {% for ingredient in missing_ingredients %}
+                            <li>{{ ingredient.name }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>You have all the ingredients! You can cook this recipe.</p>
+                {% endif %}
             </section>
 
             <!-- INSTRUCTIONS SECTION ────────────────────────────────────────
@@ -211,11 +224,11 @@
     function showToMakePopup(data) {
         const available = data.available || [], missing = data.missing || [];
         const availableHtml = available.length ? `<div class="ingredient-section available"><h4>✅ You have (${available.length})</h4><ul class="ingredient-list">${available.map(n=>`<li>${n}</li>`).join('')}</ul></div>` : '';
-        const missingHtml   = missing.length   ? `<div class="ingredient-section missing"><h4>❌ Missing (${missing.length}) — added to your grocery list</h4><ul class="ingredient-list">${missing.map(n=>`<li>${n}</li>`).join('')}</ul></div>` : '';
+        const missingHtml   = missing.length   ? `<div class="ingredient-section missing"><h4>❌ Missing (${missing.length}) — in your grocery missing list</h4><ul class="ingredient-list">${missing.map(n=>`<li>${n}</li>`).join('')}</ul></div>` : '';
         document.getElementById('popupContent').innerHTML = `
             <div class="popup-icon">${data.can_cook ? '🎉' : '🛒'}</div>
             <div class="popup-title">${data.can_cook ? 'Recipe in Queue!' : 'Some Ingredients Missing'}</div>
-            <div class="popup-msg">${data.can_cook ? `You have everything to make <strong>${data.recipe}</strong>. Ready to cook!` : `Some ingredients are missing for <strong>${data.recipe}</strong>. They've been added to your grocery list.`}</div>
+            <div class="popup-msg">${data.can_cook ? `You have everything to make <strong>${data.recipe}</strong>. Ready to cook!` : `Some ingredients are missing for <strong>${data.recipe}</strong>. They're now in your grocery missing list.`}</div>
             ${availableHtml}${missingHtml}
             <a href="/grocery/" class="popup-btn">View Grocery List</a>
             <button class="popup-btn secondary" onclick="closePopup()">Close</button>`;

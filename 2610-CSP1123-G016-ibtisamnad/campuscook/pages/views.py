@@ -55,8 +55,20 @@ def grocery(request):
         # name comes from the text input in grocery.html
         name = request.POST.get('name', '').strip()
         custom_name = request.POST.get('custom_name', '').strip()
+        quantity = request.POST.get('quantity', '1').strip()
+        try:
+            quantity = int(quantity)
+        except ValueError:
+            quantity = 1
+
         if name:
-            Grocery.objects.create(user=user, name=name, custom_name=custom_name or None, status='available')
+            Grocery.objects.create(
+                user=user,
+                name=name,
+                custom_name=custom_name or None,
+                quantity=quantity if quantity > 0 else 1,
+                status='available'
+            )
         return redirect('grocery')
 
     # groceries → all Grocery rows belonging to this user

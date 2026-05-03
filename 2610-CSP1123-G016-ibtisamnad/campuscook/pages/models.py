@@ -27,8 +27,7 @@ class Grocery(models.Model):
  
     name        = models.CharField(max_length=100, default='')
     custom_name = models.CharField(max_length=100, null=True, blank=True)
- 
-    # status → 'available' by default when user manually adds
+    quantity    = models.PositiveIntegerField(default=1)
     #          'missing'   when auto-added via "To Make" button
     status      = models.CharField(
         max_length=20,
@@ -48,7 +47,8 @@ class Grocery(models.Model):
     )
  
     def __str__(self):
-        return f"{self.name} ({self.status})"
+        quantity_label = f"{self.quantity}x " if self.quantity and self.quantity != 1 else ""
+        return f"{quantity_label}{self.name} ({self.status})"
  
  
 class Recipe(models.Model):

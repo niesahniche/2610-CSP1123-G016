@@ -2,10 +2,6 @@
 
 {% block content %}
 
-{% for recipe in recipes %}
-    <li><a href="/check/{{ recipe.id }}/">{{ recipe.name }}</a></li>
-{% endfor %}
-
 {%if recipe.id %}
     <h2>{{ recipe.name }}</h2>
 

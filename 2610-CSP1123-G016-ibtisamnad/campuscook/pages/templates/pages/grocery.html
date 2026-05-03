@@ -8,6 +8,7 @@
   <form method="POST" class="add_form">
     {% csrf_token %}
     <input type="text" name="name" placeholder="Ingredient name (e.g. Eggs)" required/>
+    <input type="number" name="quantity" min="1" value="1" placeholder="Qty"/>
     <input type="text" name="custom_name" placeholder="Custom label (optional)"/>
     <button type="submit">Add Item</button>
   </form>
@@ -21,8 +22,11 @@
       <ul class="grocery_list">
         {% for item in available %}
           <li class="grocery_item">
-            <span class="item_name">{{ item.name }}</span>
-            {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+            <div class="item_info">
+              <span class="item_quantity">{{ item.quantity }}x</span>
+              <span class="item_name">{{ item.name }}</span>
+              {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+            </div>
             <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
           </li>
         {% empty %}
@@ -39,6 +43,7 @@
         {% for item in missing %}
           <li class="grocery_item missing_item">
             <div class="item_info">
+              <span class="item_quantity">{{ item.quantity }}x</span>
               <span class="item_name">{{ item.name }}</span>
               {% if item.for_recipe %}
                 <span class="item_for">needed for: {{ item.for_recipe }}</span>
@@ -62,7 +67,9 @@
   .grocery_page { max-width: 800px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
   .grocery_page h1 { font-size: 1.8rem; font-weight: 700; color: #2c2520; margin-bottom: 1.5rem; border-bottom: 2px solid #e0d5c1; padding-bottom: 0.8rem; }
   .add_form { display: flex; gap: 0.6rem; flex-wrap: wrap; background: #fff; border: 1.5px solid #e0d5c1; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 2rem; align-items: center; }
-  .add_form input[type="text"] { flex: 1; min-width: 140px; padding: 0.6rem 0.9rem; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.9rem; outline: none; }
+  .add_form input[type="text"],
+  .add_form input[type="number"] { flex: 1; min-width: 140px; padding: 0.6rem 0.9rem; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.9rem; outline: none; }
+  .add_form input[type="number"] { max-width: 110px; }
   .add_form input:focus { border-color: #6ac383; }
   .add_form button { padding: 0.6rem 1.2rem; background: #96D4AA; color: #fff; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
   .add_form button:hover { background: #6ac383; }
@@ -76,7 +83,8 @@
   .grocery_list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
   .grocery_item { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.8rem; border: 1px solid #f0ece4; border-radius: 8px; background: #faf6f0; flex-wrap: wrap; }
   .missing_item { background: #fff8f5; border-color: #f5ddd4; }
-  .item_info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+  .item_info { display: flex; align-items: center; gap: 0.5rem; flex: 1; flex-wrap: wrap; }
+  .item_quantity { font-size: 0.85rem; font-weight: 700; color: #2d6a4f; }
   .item_name   { font-size: 0.9rem; font-weight: 600; color: #2c2520; }
   .item_custom { font-size: 0.78rem; color: #888; }
   .item_for    { font-size: 0.75rem; color: #b85c38; font-style: italic; }

@@ -47,6 +47,18 @@
             {% endif %}
         </div>
 
+        <!-- IMAGE URL -->
+        <div class="form_group">
+            <label for="id_image_url">Image URL (optional)</label>
+            <input
+                type="url"
+                id="id_image_url"
+                name="image_url"
+                placeholder="https://example.com/image.jpg"
+                value="{{ form.image_url.value|default:'' }}"
+                class="form_input"/>
+        </div>
+
         <!-- COOKING TIME ────────────────────────────────────────────────────
              maps to Recipe.cooking_time (IntegerField) in models.py        -->
         <div class="form_group">

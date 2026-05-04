@@ -31,9 +31,8 @@
             <div class="detail_title_row">
                 <h1 class="detail_title">{{ recipe.name }}</h1>
                 <div class="detail_actions">
-                    <a href="{% url 'check_recipe' recipe.id %}" class="btn_action btn_check">✅ Can I cook this?</a>
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="toMake(this)">🍳 To Make</button>
+                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
                     {% endif %}
                     {% if user.is_authenticated %}
                     <button class="btn_action btn_fav {% if is_fav %}btn_fav_active{% endif %}" 
@@ -299,7 +298,7 @@
         const method   = isFav ? 'DELETE' : 'POST';
  
         try {
-            const res = await fetch(`/api/favourite/${recipeId}/`, {
+            const res = await fetch(`/api/toggle-favourite/${recipeId}/`, {
                 method,
                 headers: { 'X-CSRFToken': getCookie('csrftoken') },
             });

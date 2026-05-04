@@ -63,10 +63,8 @@
                      onclick sends POST to /api/favourite-recipes/
                      Django stores: FavouriteRecipe(recipe_id=recipe.id, user=user) -->
                 <div class="card_actions">
-                    <a href="{% url 'check_recipe' recipe.id %}" class="btn_action btn_check">✅ Can I cook this?</a>
-
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="toMake(this)">🍳 To Make</button>
+                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
                     {% endif %}
 
                     {% if user.is_authenticated %}
@@ -224,6 +222,88 @@
         t.textContent = msg; t.className = `toast show ${type}`;
         setTimeout(() => { t.className = 'toast'; }, 3000);
     }
+
+    async function step1CheckIngredients(btn) {
+    const recipeId = btn.dataset.recipeId;
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    try {
+        const res = await fetch(`/api/check-ingredients/${recipeId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        showStep1Popup(data);
+    } catch {
+        showToast('Could not check ingredients. Try again.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🍳 To Make';
+    }
+}
+
+function showStep1Popup(data) {
+    const available = data.available || [];
+    const missing   = data.missing   || [];
+    const availableHtml = available.length ? `
+        <div class="ingredient-section available">
+            <h4>✅ You have these (${available.length})</h4>
+            <ul class="ingredient-list">${available.map(n => `<li>${n}</li>`).join('')}</ul>
+        </div>` : '';
+    const missingHtml = missing.length ? `
+        <div class="ingredient-section missing">
+            <h4>❌ You're missing these (${missing.length})</h4>
+            <ul class="ingredient-list">${missing.map(n => `<li>${n}</li>`).join('')}</ul>
+        </div>` : '';
+    document.getElementById('popupContent').innerHTML = `
+        <div class="popup-icon">${data.can_cook ? '🎉' : '🛒'}</div>
+        <div class="popup-title">${data.can_cook ? 'You have everything!' : 'Some ingredients missing'}</div>
+        <div class="popup-msg">${data.can_cook
+            ? `You can make <strong>${data.recipe}</strong> with what you have.`
+            : `You're missing some ingredients for <strong>${data.recipe}</strong>.`}</div>
+        ${availableHtml}
+        ${missingHtml}
+        <button class="popup-btn" onclick="step2AddToGrocery(${data.recipe_id})">
+            ${data.can_cook ? '✅ Add to grocery list' : '🛒 Add all to grocery list (missing flagged)'}
+        </button>
+        <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+    `;
+    openPopup();
+}
+
+async function step2AddToGrocery(recipeId) {
+    try {
+        const res = await fetch(`/api/add-ingredients/${recipeId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        document.getElementById('popupContent').innerHTML = `
+            <div class="popup-icon">✅</div>
+            <div class="popup-title">Grocery list updated!</div>
+            <div class="popup-msg">${data.can_cook
+                ? `All ingredients for <strong>${data.recipe}</strong> are in your grocery list.`
+                : `<strong>${data.added_missing.length}</strong> missing ingredient(s) added to your grocery list.`}</div>
+            <a href="/grocery/" class="popup-btn">View Grocery List</a>
+            <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+        `;
+    } catch {
+        showToast('Could not update grocery list. Try again.', 'error');
+    }
+}
+
+function openPopup() {
+    document.getElementById('popup').classList.add('open');
+    document.getElementById('popupOverlay').classList.add('open');
+}
+
+function closePopup() {
+    document.getElementById('popup').classList.remove('open');
+    document.getElementById('popupOverlay').classList.remove('open');
+}
+
 </script>
 
 {% endblock %}

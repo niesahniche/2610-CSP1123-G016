@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import AppUserCreationForm, RecipeForm
 import json
 
-from .models import Grocery, AppUser, Recipe, SavedRecipe
+from .models import Grocery, AppUser, Recipe, FavouriteRecipe
 
 
 # ── Home ──────────────────────────────────────────────────────────────────────
@@ -23,10 +23,6 @@ def about(request):
 
 
 # ── Check recipe ──────────────────────────────────────────────────────────────
-def check(request):
-    return render(request, "pages/check.html", {'recipes': Recipe.objects.all()})
-
-
 def check_recipe(request, recipe_id):
     user   = request.user if request.user.is_authenticated else AppUser.objects.first()
     recipe = get_object_or_404(Recipe, id=recipe_id)
@@ -35,14 +31,18 @@ def check_recipe(request, recipe_id):
     recipe_ingredients = recipe.ingredients.all()
 
     # my_groceries → Grocery items owned by this user
-    my_groceries = Grocery.objects.filter(user=user, status='available')
+    my_available = Grocery.objects.filter(user=user, status='available')
 
+    # available → recipe ingredients the user already has in their grocery list
+    available = recipe_ingredients.filter(id__in=my_available.values_list('id', flat=True))
+    
     # missing → recipe ingredients NOT in user's grocery list
-    missing = recipe_ingredients.exclude(id__in=my_groceries.values_list('id', flat=True))
+    missing = recipe_ingredients.exclude(id__in=my_available.values_list('id', flat=True))
 
     return render(request, 'pages/check.html', {
         'recipe':  recipe,
         'missing': missing,
+        'available': available,
         'recipes': Recipe.objects.all(),
     })
 
@@ -85,16 +85,16 @@ def recipe_list(request):
     recipes   = paginator.get_page(request.GET.get('page'))
 
     if request.user.is_authenticated:
-        saved_ids = set(
-            SavedRecipe.objects.filter(user=request.user)
+        fav_ids = set(
+            FavouriteRecipe.objects.filter(user=request.user)
             .values_list('recipe_id', flat=True)
         )
     else:
-        saved_ids = set()
+        fav_ids = set()
  
     return render(request, 'pages/recipe_list.html', {
         'recipes':   recipes,
-        'saved_ids': list(saved_ids),
+        'fav_ids': list(fav_ids),
     })
 
 # ── Recipe filter ─────────────────────────────────────────────────────────────
@@ -123,13 +123,13 @@ def recipe_filter(request):
 # ── Recipe detail ─────────────────────────────────────────────────────────────
 def recipe_detail(request, id):
     recipe = get_object_or_404(Recipe, id=id)
-    is_saved = (
+    is_fav = (
         request.user.is_authenticated and
-        SavedRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+        FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
     )
     return render(request, 'pages/recipe_detail.html', {
         'recipe':   recipe,
-        'is_saved': is_saved,
+        'is_saved': is_fav,
     })
 
 # ── Add recipe ────────────────────────────────────────────────────────────────
@@ -143,6 +143,8 @@ def add_recipe(request):
         # set the ingredients queryset to this user's groceries
         form.fields['ingredients'].queryset = Grocery.objects.filter(user=user, status='available')
 
+        #custom ingredients coding here sammm hehe!
+
         if form.is_valid():
             # create the Recipe row but don't save to DB yet (commit=False)
             # so we can set the user FK first
@@ -152,6 +154,8 @@ def add_recipe(request):
 
             # save ManyToMany (ingredients) — must be done AFTER recipe.save()
             form.save_m2m()
+
+            #another custom ingredients logic
 
             messages.success(request, f'"{recipe.name}" has been added!')
 
@@ -219,54 +223,127 @@ def to_make(request, recipe_id):
         'recipe':    recipe.name,
     })
 
-# ── Saved recipes page ────────────────────────────────────────────────────────
-def saved_recipes(request):
-    return render(request, 'pages/saved_recipes.html')
+# ── Favourite recipes page ────────────────────────────────────────────────────────
+def favourite_recipes(request):
+    return render(request, 'pages/favourite_recipes.html')
 
-
-# ── Saved recipes API — GET ───────────────────────────────────────────────────
 @require_http_methods(['GET'])
-def saved_recipe_list(request):
-    if request.user.is_authenticated:
-        saved = SavedRecipe.objects.select_related('recipe').filter(user=request.user)
-    else:
-        saved = SavedRecipe.objects.select_related('recipe').all()
-
+def favourite_recipe_list(request):
+    user = request.user if request.user.is_authenticated else AppUser.objects.first()
+    favs = FavouriteRecipe.objects.select_related('recipe').filter(user=user)
     data = [
         {
-            "saved_recipes_id": s.id,
-            "recipe_id":        s.recipe.id,
-            "title":            s.recipe.name,
+            'fav_id':    f.id,
+            'recipe_id': f.recipe.id,
+            'title':     f.recipe.name,
+            'image_url': f.recipe.image_url or '',
         }
-        for s in saved
+        for f in favs
     ]
     return JsonResponse(data, safe=False)
 
+# ── Favourite list API — returns JSON list of user's favourites ───────────────
+@require_http_methods(['GET'])
+def favourite_recipe_list(request):
+    user = request.user if request.user.is_authenticated else AppUser.objects.first()
+    favs = FavouriteRecipe.objects.select_related('recipe').filter(user=user)
+    data = [
+        {
+            'fav_id':    f.id,
+            'recipe_id': f.recipe.id,
+            'title':     f.recipe.name,
+            'image_url': f.recipe.image_url or '',
+        }
+        for f in favs
+    ]
+    return JsonResponse(data, safe=False)
 
-# ── Saved recipes API — POST ──────────────────────────────────────────────────
+# ── Favourite API — toggle (POST = favourite, DELETE = unfavourite) ───────────
+@csrf_exempt
+@require_http_methods(['POST', 'DELETE'])
+def toggle_favourite(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    user   = request.user if request.user.is_authenticated else AppUser.objects.first()
+ 
+    if request.method == 'POST':
+        fav, created = FavouriteRecipe.objects.get_or_create(user=user, recipe=recipe)
+        return JsonResponse({
+            'favourited': True,
+            'created':    created,
+            'fav_id':     fav.id,
+        }, status=201 if created else 200)
+ 
+    # DELETE — unfavourite
+    FavouriteRecipe.objects.filter(user=user, recipe=recipe).delete()
+    return JsonResponse({'favourited': False})
+ 
+ 
+# ── Ingredient check API — Step 1: returns available/missing lists ────────────
+# Called from recipe detail page when user clicks "Check Ingredients"
+# Does NOT add anything to grocery yet — just returns the data for Step 1
 @csrf_exempt
 @require_http_methods(['POST'])
-def save_recipe(request):
-    body   = json.loads(request.body)
-    recipe = get_object_or_404(Recipe, pk=body['recipe_id'])
+def check_ingredients(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
     user   = request.user if request.user.is_authenticated else AppUser.objects.first()
-    saved, created = SavedRecipe.objects.get_or_create(recipe=recipe, user=user)
+ 
+    recipe_ingredients = recipe.ingredients.all()
+    my_available = Grocery.objects.filter(user=user, status='available')
+ 
+    available = [g.name for g in recipe_ingredients
+                 if my_available.filter(id=g.id).exists()]
+    missing   = [g.name for g in recipe_ingredients
+                 if not my_available.filter(id=g.id).exists()]
+ 
     return JsonResponse({
-        'saved':            True,
-        'created':          created,
-        'saved_recipes_id': saved.id,
-        'recipe_id':        recipe.id,
-    }, status=201 if created else 200)
-
-
-# ── Saved recipes API — DELETE ────────────────────────────────────────────────
+        'recipe':    recipe.name,
+        'recipe_id': recipe.id,
+        'available': available,
+        'missing':   missing,
+        'can_cook':  len(missing) == 0,
+    })
+ 
+ 
+# ── Ingredient add API — Step 2: adds all to grocery after user confirms ──────
+# Called when user clicks "Add to Grocery List" after seeing Step 1 results
+# Adds available items (status='available') and missing items (status='missing')
 @csrf_exempt
-@require_http_methods(['DELETE'])
-def unsave_recipe(request, saved_recipe_id):
-    obj = get_object_or_404(SavedRecipe, pk=saved_recipe_id)
-    obj.delete()
-    return JsonResponse({"deleted": True})
-
+@require_http_methods(['POST'])
+def add_ingredients_to_grocery(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    user   = request.user if request.user.is_authenticated else AppUser.objects.first()
+ 
+    recipe_ingredients = recipe.ingredients.all()
+    my_available = Grocery.objects.filter(user=user, status='available')
+    added_available = []
+    added_missing   = []
+ 
+    for ing in recipe_ingredients:
+        has_it = my_available.filter(id=ing.id).exists()
+ 
+        if has_it:
+            # user already has this — mark as available (it's already there,
+            # but we confirm it's linked to this recipe for reference)
+            added_available.append(ing.name)
+        else:
+            # user doesn't have this — add as missing with recipe note
+            already = Grocery.objects.filter(
+                user=user, name=ing.name,
+                status='missing', for_recipe=recipe.name
+            ).exists()
+            if not already:
+                Grocery.objects.create(
+                    user=user, name=ing.name,
+                    status='missing', for_recipe=recipe.name
+                )
+            added_missing.append(ing.name)
+ 
+    return JsonResponse({
+        'recipe':           recipe.name,
+        'added_available':  added_available,
+        'added_missing':    added_missing,
+        'can_cook':         len(added_missing) == 0,
+    })
 
 # ── Signup ────────────────────────────────────────────────────────────────────
 def signup_view(request):
@@ -298,8 +375,9 @@ def logout_view(request):
 # ── Profile ───────────────────────────────────────────────────────────────────
 @login_required
 def profile(request):
-    saved = SavedRecipe.objects.select_related('recipe').filter(user=request.user)
+    favourites = FavouriteRecipe.objects.select_related('recipe').filter(user=request.user)
+    print("FAVOURITES",  list(favourites))  # Debug print to check the queryset contents
     return render(request, 'pages/user_profile.html', {
-        'user':          request.user,
-        'saved_recipes': saved,
+        'user':              request.user,
+        'favourites': favourites,
     })

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import AppUser, Recipe, Grocery, SavedRecipe, Comment, RecipeFilter
+from .models import AppUser, FavouriteRecipe, Recipe, Grocery, Comment, RecipeFilter
 
 # ── AppUser ───────────────────────────────────────────────────────────────────
 @admin.register(AppUser)
@@ -53,9 +53,9 @@ class GroceryAdmin(admin.ModelAdmin):
         return qs.filter(user=request.user)
  
  
-# ── SavedRecipe ───────────────────────────────────────────────────────────────
-@admin.register(SavedRecipe)
-class SavedRecipeAdmin(admin.ModelAdmin):
+# ── FavouriteRecipe ───────────────────────────────────────────────────────────────
+@admin.register(FavouriteRecipe)
+class FavouriteRecipeAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
  
     def get_queryset(self, request):

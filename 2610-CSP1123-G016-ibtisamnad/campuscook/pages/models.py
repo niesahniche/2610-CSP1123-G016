@@ -62,6 +62,7 @@ class Recipe(models.Model):
     cooking_time = models.IntegerField()
     appliance    = models.CharField(max_length=100)
     instructions = models.TextField()
+    image_url    = models.URLField(max_length=500, null=True, blank=True)
     filters      = models.ManyToManyField(RecipeFilter, blank=True)
     # user → AppUser who created this recipe
     user         = models.ForeignKey(
@@ -74,26 +75,23 @@ class Recipe(models.Model):
         return self.name
  
  
-class SavedRecipe(models.Model):
-    # saved_recipes_id → PK (auto-created by Django as 'id')
-    # user             → FK to AppUser
-    # recipe           → FK to Recipe
+class FavouriteRecipe(models.Model):
     user   = models.ForeignKey(
         'pages.AppUser',
         on_delete=models.CASCADE,
-        related_name='saved_recipes'
+        related_name='favourite_recipes'
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='saved_by'
+        related_name='favourited_by'
     )
  
     class Meta:
-        unique_together = ('user', 'recipe')  # prevent duplicate saves
+        unique_together = ('user', 'recipe')
  
     def __str__(self):
-        return f"{self.user.username} saved {self.recipe.name}"
+        return f"{self.user.username} favourited {self.recipe.name}"
  
  
 class Comment(models.Model):

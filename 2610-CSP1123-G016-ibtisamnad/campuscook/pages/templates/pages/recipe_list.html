@@ -25,9 +25,11 @@
     <!-- FILTER LINK ─────────────────────────────────────────────────────
          links to recipe_filter page                                      -->
     <div class="filter_link_wrap">
+        {% if user.is_authenticated %}
         <a href="{% url 'recipe_filter' %}" class="btn_filter_page">
             🔍 Filter Recipes
         </a>
+        {% endif %}
     </div>
 
     <!-- RECIPE CARDS ────────────────────────────────────────────────────
@@ -45,18 +47,21 @@
                 <div class="card_image_wrap">
                     <!-- links to recipe detail page using recipe.id as PK -->
                     <a href="{% url 'recipe_detail' recipe.id %}">
-                        <!-- no image field in model yet — placeholder shown -->
-                        <div class="card_image_placeholder"></div>
+                        {% if recipe.image_url %}
+                            <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" class="card_image">
+                        {% else %}
+                            <div class="card_image_placeholder"></div>
+                        {% endif %}
                     </a>
                 </div>
 
                 <!-- cooking_time and appliance → fields from Recipe table -->
                 <p>⏱ {{ recipe.cooking_time }} mins | 🔧 {{ recipe.appliance }}</p>
 
-                <!-- SAVE BUTTON ──────────────────────────────────────────────
+                <!-- Favourite BUTTON ──────────────────────────────────────────────
                      data-recipe-id="{{ recipe.id }}" → PK from Recipe table
-                     onclick sends POST to /api/saved-recipes/
-                     Django stores: SavedRecipe(recipe_id=recipe.id, user=user) -->
+                     onclick sends POST to /api/favourite-recipes/
+                     Django stores: FavouriteRecipe(recipe_id=recipe.id, user=user) -->
                 <div class="card_actions">
                     <a href="{% url 'check_recipe' recipe.id %}" class="btn_action btn_check">✅ Can I cook this?</a>
 
@@ -65,8 +70,13 @@
                     {% endif %}
 
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_save {% if recipe.id in saved_ids %}btn_saved{% endif %}" data-recipe-id="{{ recipe.id }}" data-saved="{% if recipe.id in saved_ids %}true{% else %}false{% endif %}" onclick="saveRecipe(this)">
-                        {% if recipe.id in saved_ids %}✓ Saved{% else %}🔖 Save{% endif %}
+                    <button class="btn_action btn_fav {% if recipe.id in fav_ids %}btn_fav_active{% endif %}"
+                    data-recipe-id="{{ recipe.id }}" 
+                    data-fav="{% if recipe.id in fav_ids %}true{% else %}false{% endif %}"
+                    onclick="toggleFav(this)"
+                    title="{% if recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
+                    >
+                    {% if recipe.id in fav_ids %}♥ Favourited{% else %}♡ Favourite{% endif %}
                     </button>
                     {% endif %}
 
@@ -115,9 +125,9 @@
   .btn_check:hover { background: #6ac383; color: #fff; }
   .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
   .btn_tomake:hover { background: #e6a817; color: #fff; }
-  .btn_save   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
-  .btn_save:hover { background: #9b72d4; color: #fff; }
-  .btn_saved  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
+  .btn_fav   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
+  .btn_fav:hover { background: #9b72d4; color: #fff; }
+  .btn_favourited  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
   .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
   .btn_share:hover { background: #6488d4; color: #fff; }
   .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
@@ -146,31 +156,49 @@
   .toast.error   { background: #b85c38; }
 </style>
 
-<!-- SAVE RECIPE SCRIPT ───────────────────────────────────────────────────────
-     Sends POST to /api/saved-recipes/ → save_recipe view → SavedRecipe table -->
+<!-- Favourite RECIPE SCRIPT ───────────────────────────────────────────────────────
+     Sends POST to /api/favourite-recipes/ → favourite_recipe view → FavouriteRecipe table -->
 <script>
-        const SAVED_IDS = new Set({{ saved_ids|safe }});
-
-    async function saveRecipe(btn) {
-        if (btn.dataset.saved === 'true') return;
+    // fav_ids → recipe PKs already favourited by this user
+    // pre-loaded from DB so hearts show correct state on page load
+    const FAV_IDS = new Set({{ fav_ids|safe }});
+ 
+    // ── Toggle Favourite ──────────────────────────────────────────────────────
+    // POST to favourite, DELETE to unfavourite
+    // button state updates immediately without page reload
+    async function toggleFav(btn) {
         const recipeId = btn.dataset.recipeId;
-        btn.disabled = true; btn.textContent = 'Saving…';
+        const isFav    = btn.dataset.fav === 'true';
+        const method   = isFav ? 'DELETE' : 'POST';
+ 
         try {
-            const res = await fetch("{% url 'save_recipe' %}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ recipe_id: recipeId }),
+            const res = await fetch(`/api/toggle-favourite/${recipeId}/`, {
+                method,
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
             });
             if (!res.ok) throw new Error();
-            btn.textContent = '✓ Saved'; btn.dataset.saved = 'true';
-            btn.classList.add('btn_saved'); btn.disabled = false;
-            showToast('Recipe saved! ✓', 'success');
+ 
+            if (isFav) {
+                // unfavourited
+                btn.dataset.fav   = 'false';
+                btn.textContent   = '♡ Favourite';
+                btn.classList.remove('btn_fav_active');
+                btn.title         = 'Favourite';
+                showToast('Removed from favourites', '');
+            } else {
+                // favourited
+                btn.dataset.fav   = 'true';
+                btn.textContent   = '♥ Favourited';
+                btn.classList.add('btn_fav_active');
+                btn.title         = 'Unfavourite';
+                showToast('Added to favourites ♥', 'success');
+            }
         } catch {
-            btn.disabled = false; btn.textContent = '🔖 Save';
-            showToast('Could not save. Try again.', 'error');
+            showToast('Could not update. Try again.', 'error');
         }
     }
-
+ 
+    // ── Share Recipe ──────────────────────────────────────────────────────────
     async function shareRecipe(btn) {
         const url = btn.dataset.url;
         try {
@@ -184,51 +212,14 @@
             showToast('Link copied! 🔗', 'success');
         }
     }
-
-    async function toMake(btn) {
-        const recipeId = btn.dataset.recipeId;
-        btn.disabled = true; btn.textContent = 'Checking…';
-        try {
-            const res = await fetch(`/api/to-make/${recipeId}/`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': getCookie('csrftoken') },
-            });
-            if (!res.ok) throw new Error();
-            showToMakePopup(await res.json());
-        } catch {
-            showToast('Could not check ingredients. Try again.', 'error');
-        } finally {
-            btn.disabled = false; btn.textContent = '🍳 To Make';
-        }
-    }
-
-    function showToMakePopup(data) {
-        const available = data.available || [], missing = data.missing || [];
-        const availableHtml = available.length ? `<div class="ingredient-section available"><h4>✅ You have (${available.length})</h4><ul class="ingredient-list">${available.map(n=>`<li>${n}</li>`).join('')}</ul></div>` : '';
-        const missingHtml   = missing.length   ? `<div class="ingredient-section missing"><h4>❌ Missing (${missing.length}) — added to your grocery list</h4><ul class="ingredient-list">${missing.map(n=>`<li>${n}</li>`).join('')}</ul></div>` : '';
-        document.getElementById('popupContent').innerHTML = `
-            <div class="popup-icon">${data.can_cook ? '🎉' : '🛒'}</div>
-            <div class="popup-title">${data.can_cook ? 'Recipe in Queue!' : 'Some Ingredients Missing'}</div>
-            <div class="popup-msg">${data.can_cook ? `You have everything to make <strong>${data.recipe}</strong>. Ready to cook!` : `Some ingredients are missing for <strong>${data.recipe}</strong>. They've been added to your grocery list.`}</div>
-            ${availableHtml}${missingHtml}
-            <a href="/grocery/" class="popup-btn">View Grocery List</a>
-            <button class="popup-btn secondary" onclick="closePopup()">Close</button>`;
-        document.getElementById('popup').classList.add('open');
-        document.getElementById('popupOverlay').classList.add('open');
-    }
-
-    function closePopup() {
-        document.getElementById('popup').classList.remove('open');
-        document.getElementById('popupOverlay').classList.remove('open');
-    }
-
+ 
     function getCookie(name) {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return parts.pop().split(';').shift();
     }
-
-    function showToast(msg, type='') {
+ 
+    function showToast(msg, type = '') {
         const t = document.getElementById('toast');
         t.textContent = msg; t.className = `toast show ${type}`;
         setTimeout(() => { t.className = 'toast'; }, 3000);

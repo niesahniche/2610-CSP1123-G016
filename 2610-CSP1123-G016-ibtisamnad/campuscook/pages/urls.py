@@ -12,7 +12,6 @@ urlpatterns = [
     path("remove/<int:id>/",  views.remove_item, name="remove_item"),
 
     # ── Check recipe ──────────────────────────────────────────────────────────
-    path("check/",                 views.check,        name="check"),
     path("check/<int:recipe_id>/", views.check_recipe, name="check_recipe"),
 
     # ── Recipe pages ──────────────────────────────────────────────────────────
@@ -26,30 +25,25 @@ urlpatterns = [
     # ── To Make — checks ingredients, adds missing to Grocery table ───────────
     path("api/to-make/<int:recipe_id>/", views.to_make, name="to_make"),
 
-    # ── Saved recipes (HTML page) ─────────────────────────────────────────────
-    path("saved/", views.saved_recipes, name="saved_recipes"),
+    # ── Favourite recipes (HTML page) ─────────────────────────────────────────
+    path("saved/", views.favourite_recipes, name="saved_recipes"),
 
-    # ── Saved recipes API ─────────────────────────────────────────────────────
-    # POST   /api/saved-recipes/          → save_recipe view (saves a recipe)
-    # GET    /api/saved-recipes/list/     → saved_recipe_list view (returns JSON)
-    # DELETE /api/saved-recipes/<id>/     → unsave_recipe view (removes saved)
-    path("api/saved-recipes/",                       views.save_recipe,       name="save_recipe"),
-    path("api/saved-recipes/list/",                  views.saved_recipe_list, name="saved_recipe_list"),
-    path("api/saved-recipes/<int:saved_recipe_id>/", views.unsave_recipe,     name="unsave_recipe"),
+    # ── Favourite API ─────────────────────────────────────────────────────────
+    path("api/toggle-favourite/<int:recipe_id>/", views.toggle_favourite, name="toggle_favourite"),
+    path("api/favourites/",                       views.favourite_recipe_list, name="favourite_recipe_list"),
+
+    # ── Ingredient check/add APIs ─────────────────────────────────────────────
+    path("api/check-ingredients/<int:recipe_id>/",      views.check_ingredients,        name="check_ingredients"),
+    path("api/add-ingredients/<int:recipe_id>/",        views.add_ingredients_to_grocery, name="add_ingredients_to_grocery"),
 
     # ── Auth ──────────────────────────────────────────────────────────────────
-    # Signup — custom view so we can use our AppUser model
     path("signup/", views.signup_view, name="signup"),
 
-    # Login — Django's built-in LoginView, uses pages/login.html
-    # After login, redirects to 'home' (set LOGIN_REDIRECT_URL in settings.py)
     path("accounts/login/",
          auth_views.LoginView.as_view(template_name="pages/login.html"),
          name="login"),
 
-    # Logout — custom view (POST only for security)
     path("accounts/logout/", views.logout_view, name="logout"),
 
-    # Profile — requires login (@login_required in views.py)
     path("profile/", views.profile, name="profile"),
 ]

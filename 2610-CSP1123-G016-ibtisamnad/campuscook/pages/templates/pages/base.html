@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Cook</title>
-    <script src="{% static 'pages/js.js' %}" defer></script>
+    <script src="{% static 'pages/script.js' %}" defer></script>
     <link rel="stylesheet" href="{% static 'pages/style.css' %}">
 </head>
 <body>
@@ -15,7 +15,6 @@
             <li><a href="{% url 'home' %}">Home</a></li>
             <li><a href="{% url 'grocery' %}">Grocery</a></li>
             <li><a href="{% url 'about' %}">About</a></li>
-            <li><a href="{% url 'check' %}">Check Recipe</a></li>
             <li><a href="{% url 'recipe_list' %}">Recipes</a></li>
             {% if user.is_authenticated %}
                 <li><a href="{% url 'profile' %}">Profile</a></li>

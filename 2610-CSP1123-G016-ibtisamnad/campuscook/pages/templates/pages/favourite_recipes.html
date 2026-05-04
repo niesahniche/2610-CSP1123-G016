@@ -7,9 +7,6 @@
     <h1>My Saved Recipes</h1>
     <p id="recipe-count" class="recipe_count">Loading…</p>
 
-    <!-- RECIPE LIST ──────────────────────────────────────────────────────────
-         Populated by JavaScript below via GET /api/saved-recipes/list/
-         which queries SavedRecipe table joined with Recipe table             -->
     <div class="recipe_list" id="saved-list">
         <p class="loading">Fetching saved recipes…</p>
     </div>
@@ -17,10 +14,8 @@
 </main>
 
 <script>
-    // GET  → saved_recipe_list view → SavedRecipe table
-    // DELETE → unsave_recipe view  → deletes SavedRecipe row by PK
-    const LIST_URL   = "{% url 'saved_recipe_list' %}";
-    const UNSAVE_URL = "/api/saved-recipes/";
+    const LIST_URL   = "{% url 'favourite_recipe_list' %}";
+    const TOGGLE_URL = "/api/toggle-favourite/";
 
     async function loadSaved() {
         const listEl  = document.getElementById('saved-list');
@@ -39,21 +34,13 @@
             countEl.textContent = `${data.length} recipe${data.length !== 1 ? 's' : ''} saved`;
 
             listEl.innerHTML = data.map(item => `
-                <div class="saved_card" id="saved-${item.saved_recipes_id}">
-
-                    <!-- title → recipe.name from Recipe table via SavedRecipe FK
-                         href   → recipe_detail page using recipe_id             -->
+                <div class="saved_card" id="fav-${item.fav_id}">
                     <a href="/recipes-detail/${item.recipe_id}/" class="saved_title">
                         ${escHtml(item.title)}
                     </a>
-
-                    <!-- UNSAVE BUTTON ───────────────────────────────────────────
-                         saved_recipes_id = PK of SavedRecipe row (not recipe PK)
-                         deletes only the saved entry, NOT the recipe itself      -->
-                    <button class="btn_unsave" onclick="unsave(${item.saved_recipes_id}, this)">
+                    <button class="btn_unsave" onclick="unfavourite(${item.recipe_id}, ${item.fav_id}, this)">
                         Remove
                     </button>
-
                 </div>
             `).join('');
 
@@ -63,16 +50,16 @@
         }
     }
 
-    async function unsave(savedId, btn) {
+    async function unfavourite(recipeId, favId, btn) {
         if (!confirm('Remove this recipe from saved?')) return;
         try {
-            const res = await fetch(`${UNSAVE_URL}${savedId}/`, {
+            const res = await fetch(`${TOGGLE_URL}${recipeId}/`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCookie('csrftoken') },
             });
             if (!res.ok) throw new Error('Delete failed');
 
-            document.getElementById(`saved-${savedId}`).remove();
+            document.getElementById(`fav-${favId}`).remove();
             const remaining = document.querySelectorAll('.saved_card').length;
             document.getElementById('recipe-count').textContent =
                 `${remaining} recipe${remaining !== 1 ? 's' : ''} saved`;

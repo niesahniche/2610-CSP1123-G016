@@ -7,9 +7,36 @@
 
   <form method="POST" class="add_form">
     {% csrf_token %}
-    <input type="text" name="name" placeholder="Ingredient name (e.g. Eggs)" required/>
-    <input type="text" name="custom_name" placeholder="Custom label (optional)"/>
-    <button type="submit">Add Item</button>
+    
+    <!-- Ingredient dropdown -->
+    <select name="ingredient_id" id="ingredient_select" class="form_select">
+      <option value="">-- Select ingredient --</option>
+      {% for ingredient in all_ingredients %}
+        <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+      {% endfor %}
+    </select>
+    
+    <!-- Custom name (optional) -->
+    <input type="text" name="custom_name" placeholder="Custom label (optional)" class="form_input"/>
+    
+    <!-- Button to add from dropdown -->
+    <button type="submit" name="action" value="add_from_dropdown" class="form_btn">Add from List</button>
+  </form>
+
+  <!-- New ingredients input -->
+  <form method="POST" class="new_ingredients_form">
+    {% csrf_token %}
+    
+    <input 
+      type="text" 
+      id="new_ingredients_input"
+      name="new_ingredients" 
+      placeholder="Add new ingredients (separate with commas)" 
+      class="form_input_full"
+    />
+    <div id="new_ingredients_tags" class="ingredients_tags"></div>
+    
+    <button type="submit" name="action" value="add_new_ingredients" class="form_btn_secondary">Add New</button>
   </form>
 
   <div class="grocery_sections">
@@ -61,11 +88,23 @@
 <style>
   .grocery_page { max-width: 800px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
   .grocery_page h1 { font-size: 1.8rem; font-weight: 700; color: #2c2520; margin-bottom: 1.5rem; border-bottom: 2px solid #e0d5c1; padding-bottom: 0.8rem; }
-  .add_form { display: flex; gap: 0.6rem; flex-wrap: wrap; background: #fff; border: 1.5px solid #e0d5c1; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 2rem; align-items: center; }
-  .add_form input[type="text"] { flex: 1; min-width: 140px; padding: 0.6rem 0.9rem; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.9rem; outline: none; }
-  .add_form input:focus { border-color: #6ac383; }
-  .add_form button { padding: 0.6rem 1.2rem; background: #96D4AA; color: #fff; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
-  .add_form button:hover { background: #6ac383; }
+  
+  .add_form { display: flex; gap: 0.6rem; flex-wrap: wrap; background: #fff; border: 1.5px solid #e0d5c1; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; align-items: center; }
+  .form_select { flex: 1; min-width: 140px; padding: 0.6rem 0.9rem; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.9rem; outline: none; }
+  .form_select:focus { border-color: #6ac383; }
+  .form_input { flex: 1; min-width: 140px; padding: 0.6rem 0.9rem; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.9rem; outline: none; }
+  .form_input:focus { border-color: #6ac383; }
+  .form_btn { padding: 0.6rem 1.2rem; background: #96D4AA; color: #fff; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+  .form_btn:hover { background: #6ac383; }
+  
+  .new_ingredients_form { background: #fff; border: 1.5px solid #e0d5c1; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 2rem; }
+  .form_input_full { width: 100%; padding: 0.6rem 0.9rem; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.9rem; outline: none; margin-bottom: 0.6rem; }
+  .form_input_full:focus { border-color: #6ac383; }
+  .ingredients_tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+  .ingredient_tag { background: #f0faf4; color: #2d6a4f; border: 1px solid #6ac383; border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.8rem; font-weight: 600; }
+  .form_btn_secondary { padding: 0.6rem 1.2rem; background: #e8f4f0; color: #2d6a4f; border: 1.5px solid #6ac383; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+  .form_btn_secondary:hover { background: #d0ebe6; }
+  
   .grocery_sections { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
   @media (max-width: 600px) { .grocery_sections { grid-template-columns: 1fr; } }
   .grocery_section { background: #fff; border: 1.5px solid #e0d5c1; border-radius: 12px; padding: 1.2rem; }
@@ -87,5 +126,19 @@
   .btn_got_it:hover { background: #6ac383; color: #fff; }
   .empty_msg { font-size: 0.85rem; color: #aaa; font-style: italic; padding: 0.4rem 0; }
 </style>
+
+<script>
+  // Handle new ingredients preview
+  document.getElementById('new_ingredients_input').addEventListener('input', function () {
+    const tagContainer = document.getElementById('new_ingredients_tags');
+    const names = this.value.split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    
+    tagContainer.innerHTML = names
+      .map(name => `<span class="ingredient_tag">+ ${name}</span>`)
+      .join('');
+  });
+</script>
 
 {% endblock %}

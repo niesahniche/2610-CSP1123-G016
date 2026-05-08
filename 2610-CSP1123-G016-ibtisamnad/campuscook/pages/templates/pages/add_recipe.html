@@ -118,49 +118,34 @@
         </div>
 
         <!-- INGREDIENTS ─────────────────────────────────────────────────────
-             maps to Recipe.ingredients (ManyToManyField → Grocery table)
-             shows all Grocery items belonging to the logged-in user
-             user selects which ones are needed for this recipe             -->
+             maps to Recipe.ingredients (ManyToManyField → Ingredient table)
+             user selects from existing ingredients via dropdown
+             or adds new ones via comma-separated input                     -->
         <div class="form_group">
-            <label>Ingredients</label>
-            {% if groceries %}
-                <p class="form_hint">Select ingredients from your grocery list</p>
-                <div class="ingredient_checkboxes">
-                    {% for grocery in groceries %}
-                        <label class="checkbox_label">
-                            <!-- value = grocery.id (PK of Grocery table)
-                                 checked if it was previously selected      -->
-                            <input
-                                type="checkbox"
-                                name="ingredients"
-                                value="{{ grocery.id }}"
-                            />
-                            {{ grocery.name }}{% if grocery.custom_name %} ({{ grocery.custom_name }}){% endif %}
-                        </label>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <!-- no groceries yet — prompt user to add some first -->
-                <p class="form_hint">
-                    You have no grocery items yet.
-                    <a href="{% url 'grocery' %}">Add ingredients to your grocery list first →</a>
-                </p>
-            {% endif %}
+            <label for="id_ingredients">Select Ingredients</label>
+            <select id="id_ingredients" name="ingredients" multiple class="ingredients_select">
+                <option value="">-- Choose ingredients --</option>
+                {% for ingredient in form.ingredients.field.queryset %}
+                    <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+                {% endfor %}
+            </select>
+            <div id="selected_ingredients" class="selected_ingredients"></div>
         </div>
-        <!-- CUSTOM INGREDIENTS — type new ones not yet in grocery list -->
+
+        <!-- NEW INGREDIENTS — Add ingredients not yet in the system -->
         <div class="form_group">
-            <label for="custom_ingredients">Add new ingredients</label>
+            <label for="new_ingredients">Add New Ingredients</label>
             <p class="form_hint">
-                Type ingredients not in your list — separate with commas.
-                They'll be added to your grocery list and linked to this recipe.
+                Type ingredients to add to the system — separate with commas.
+                They'll be saved and added to this recipe.
             </p>
             <input
                 type="text"
-                id="custom_ingredients"
-                name="custom_ingredients"
+                id="new_ingredients"
+                name="new_ingredients"
                 placeholder="e.g. Garlic, Olive Oil, Chilli flakes"
             />
-            <div id="custom_preview" class="custom_preview"></div>
+            <div id="new_ingredients_preview" class="ingredients_preview"></div>
         </div>
         <div class="form_actions">
             <a href="{% url 'recipe_list' %}" class="btn_cancel">Cancel</a>
@@ -308,6 +293,52 @@
 
     .btn_cancel:hover { border-color: #b85c38; color: #b85c38; }
 
+    .ingredients_select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #ccc;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+        background: #fff;
+    }
+
+    .ingredients_select:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .selected_ingredients {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+
+    .ingredients_preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+
+    .ingredient_tag {
+        background: #f0faf4;
+        color: #2d6a4f;
+        border: 1px solid #6ac383;
+        border-radius: 20px;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .ingredient_tag.new::before {
+        content: "+ ";
+    }
+
     .custom_preview { 
         display: flex; flex-wrap: wrap; 
         gap: 0.4rem; margin-top: 0.5rem; 
@@ -326,10 +357,27 @@
 </style>
 
 <script>
-    document.getElementById('custom_ingredients').addEventListener('input', function () {
-        const preview = document.getElementById('custom_preview');
-        const names   = this.value.split(',').map(s => s.trim()).filter(Boolean);
-        preview.innerHTML = names.map(n => `<span class="custom_tag">+ ${n}</span>`).join('');
+    // Handle multi-select ingredients dropdown
+    document.getElementById('id_ingredients').addEventListener('change', function () {
+        const selectedContainer = document.getElementById('selected_ingredients');
+        const select = this;
+        const selectedOptions = Array.from(select.selectedOptions);
+        
+        selectedContainer.innerHTML = selectedOptions
+            .map(opt => `<span class="ingredient_tag">${opt.text}</span>`)
+            .join('');
+    });
+
+    // Handle new ingredients comma-separated input
+    document.getElementById('new_ingredients').addEventListener('input', function () {
+        const previewContainer = document.getElementById('new_ingredients_preview');
+        const names = this.value.split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+        
+        previewContainer.innerHTML = names
+            .map(name => `<span class="ingredient_tag new">${name}</span>`)
+            .join('');
     });
 </script>
 

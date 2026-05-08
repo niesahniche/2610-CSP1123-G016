@@ -1,8 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager
 
-#removed ingredient, custom_ingredient, and recipe_ingredient tables — replaced with Grocery and ManyToMany in Recipe
-
 class AppUser(AbstractUser):
     # AbstractUser provides: username, password, email, first_name, last_name
     age = models.IntegerField(null=True, blank=True)
@@ -14,6 +12,14 @@ class AppUser(AbstractUser):
  
 class RecipeFilter(models.Model):
     name = models.CharField(max_length=100)
+ 
+    def __str__(self):
+        return self.name
+
+
+class Ingredient(models.Model):
+    """Global ingredient list shared by all users and recipes"""
+    name = models.CharField(max_length=100, unique=True)
  
     def __str__(self):
         return self.name
@@ -53,9 +59,9 @@ class Grocery(models.Model):
  
 class Recipe(models.Model):
     name         = models.CharField(max_length=100)
-    # ingredients → ManyToMany to Grocery table (grocery_id is the FK)
+    # ingredients → ManyToMany to Ingredient table (separate from Grocery)
     ingredients  = models.ManyToManyField(
-        Grocery,
+        Ingredient,
         blank=True,
         related_name='recipes'
     )

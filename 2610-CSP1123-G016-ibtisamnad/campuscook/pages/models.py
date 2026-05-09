@@ -29,6 +29,7 @@ class Grocery(models.Model):
     STATUS_CHOICES = [
         ('available', 'Available'),   # user has this ingredient
         ('missing',   'Missing'),     # added automatically when using "To Make"
+        ('purchased', 'Purchased'),   # marked as purchased after clicking Got it
     ]
  
     name        = models.CharField(max_length=100, default='')

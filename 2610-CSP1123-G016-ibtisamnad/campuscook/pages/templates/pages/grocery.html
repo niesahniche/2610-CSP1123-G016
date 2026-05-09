@@ -83,29 +83,55 @@
 
     <div class="grocery_section">
       <h2 class="section_heading missing_heading">
-        ❌ Missing <span class="count">({{ missing|length }})</span>
+        ❌ Missing <span class="count">({{ missing_count }})</span>
       </h2>
-      <ul class="grocery_list">
-        {% for item in missing %}
-          <li class="grocery_item missing_item">
-            <div class="item_info">
-              <span class="item_quantity">{{ item.quantity }}x</span>
-              <span class="item_name">{{ item.name }}</span>
-              {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
-              {% if item.for_recipe %}
-                <span class="item_for">needed for: {{ item.for_recipe }}</span>
-              {% endif %}
-              {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
-            </div>
-            <div class="item_actions">
-              <a href="{% url 'remove_item' item.id %}" class="btn_got_it">Got it ✓</a>
-              <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
-            </div>
-          </li>
-        {% empty %}
-          <li class="empty_msg">No missing ingredients — you're all set!</li>
-        {% endfor %}
-      </ul>
+
+      <div class="missing_subsection">
+        <h3 class="subheading">Still missing <span class="count">({{ missing|length }})</span></h3>
+        <ul class="grocery_list">
+          {% for item in missing %}
+            <li class="grocery_item missing_item">
+              <div class="item_info">
+                <span class="item_name">{{ item.name }}</span>
+                {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+                {% if item.for_recipe %}
+                  <span class="item_for">needed for: {{ item.for_recipe }}</span>
+                {% endif %}
+                {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
+              </div>
+              <div class="item_actions">
+                <a href="{% url 'purchase_item' item.id %}" class="btn_got_it">Got it ✓</a>
+                <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
+              </div>
+            </li>
+          {% empty %}
+            <li class="empty_msg">No missing ingredients — you're all set!</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="missing_subsection purchased_section">
+        <h3 class="subheading purchased_heading">Purchased <span class="count">({{ purchased|length }})</span></h3>
+        <ul class="grocery_list">
+          {% for item in purchased %}
+            <li class="grocery_item purchased_item">
+              <div class="item_info">
+                <span class="item_name">{{ item.name }}</span>
+                {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+                {% if item.for_recipe %}
+                  <span class="item_for">needed for: {{ item.for_recipe }}</span>
+                {% endif %}
+                {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
+              </div>
+              <div class="item_actions">
+                <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
+              </div>
+            </li>
+          {% empty %}
+            <li class="empty_msg">No purchased ingredients yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
 
   </div>
@@ -284,6 +310,9 @@
     transition: all 0.2s;
     cursor: pointer;
   }
+  .purchased_section { margin-top: 1rem; }
+  .purchased_heading { font-size: 0.95rem; color: #2a6f97; border-color: #67a5c5; margin-top: 0.8rem; }
+  .purchased_item { background: linear-gradient(135deg, #f4fbff 0%, #eef7fb 100%); border-color: #d5e8f2; }
   .btn_remove:hover { background: #fdf0ee; color: #d64a3d; }
   .btn_got_it { 
     font-size: 0.75rem; 

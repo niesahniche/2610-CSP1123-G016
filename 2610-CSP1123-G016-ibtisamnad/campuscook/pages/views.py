@@ -99,12 +99,22 @@ def grocery(request):
     # Get user's grocery items
     available = Grocery.objects.filter(user=user, status='available')
     missing = Grocery.objects.filter(user=user, status='missing')
+    purchased = Grocery.objects.filter(user=user, status='purchased')
     
     return render(request, 'pages/grocery.html', {
         'all_ingredients': all_ingredients,
         'available': available,
         'missing': missing,
+        'purchased': purchased,
+        'missing_count': missing.count() + purchased.count(),
     })
+
+
+def purchase_item(request, id):
+    grocery_item = get_object_or_404(Grocery, id=id)
+    grocery_item.status = 'purchased'
+    grocery_item.save(update_fields=['status'])
+    return redirect('grocery')
 
 
 def remove_item(request, id):

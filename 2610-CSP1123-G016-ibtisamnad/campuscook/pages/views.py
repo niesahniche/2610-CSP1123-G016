@@ -16,7 +16,6 @@ from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe
 def home(request):
     return render(request, "pages/home.html")
 
-
 # ── About ─────────────────────────────────────────────────────────────────────
 def about(request):
     return render(request, "pages/about.html")
@@ -32,17 +31,30 @@ def grocery(request):
         if action == 'add_from_dropdown':
             ingredient_id = request.POST.get('ingredient_id', '').strip()
             custom_name = request.POST.get('custom_name', '').strip()
+            quantity = request.POST.get('quantity', '').strip() or '1'
             
             if ingredient_id:
                 try:
                     ingredient = Ingredient.objects.get(id=ingredient_id)
-                    Grocery.objects.create(
+                    existing = Grocery.objects.filter(
                         user=user,
                         name=ingredient.name,
-                        custom_name=custom_name or None,
                         status='available'
-                    )
-                    messages.success(request, f'Added {ingredient.name} to your grocery list!')
+                    ).first()
+                    
+                    if existing:
+                        existing.quantity = quantity
+                        existing.save(update_fields=['quantity'])
+                        messages.success(request, f'{ingredient.name} quantity updated to {quantity}.')
+                    else:
+                        Grocery.objects.create(
+                            user=user,
+                            name=ingredient.name,
+                            custom_name=custom_name or None,
+                            quantity=quantity,
+                            status='available'
+                        )
+                        messages.success(request, f'Added {ingredient.name} to your grocery list!')
                 except Ingredient.DoesNotExist:
                     messages.error(request, 'Ingredient not found.')
         
@@ -58,15 +70,20 @@ def grocery(request):
                     # Create Ingredient if it doesn't exist
                     ingredient, created = Ingredient.objects.get_or_create(name=name)
                     
-                    # Add to user's grocery list
-                    grocery, created_grocery = Grocery.objects.get_or_create(
+                    # Check if already exists for user
+                    existing = Grocery.objects.filter(
                         user=user,
                         name=name,
-                        status='available',
-                        defaults={'custom_name': None}
-                    )
+                        status='available'
+                    ).exists()
                     
-                    if created_grocery:
+                    if not existing:
+                        Grocery.objects.create(
+                            user=user,
+                            name=name,
+                            status='available',
+                            quantity='1'
+                        )
                         added_count += 1
                 
                 if added_count > 0:
@@ -150,17 +167,9 @@ def recipe_detail(request, id):
         FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
     )
 
-    user = request.user if request.user.is_authenticated else AppUser.objects.first()
-    available_names = set(
-        Grocery.objects.filter(user=user, status='available')
-        .values_list('name', flat=True)
-    )
-    missing_ingredients = recipe.ingredients.exclude(name__in=available_names)
-
     return render(request, 'pages/recipe_detail.html', {
         'recipe':              recipe,
         'is_saved':            is_fav,
-        'missing_ingredients': missing_ingredients,
     })
 
 # ── Add recipe ────────────────────────────────────────────────────────────────

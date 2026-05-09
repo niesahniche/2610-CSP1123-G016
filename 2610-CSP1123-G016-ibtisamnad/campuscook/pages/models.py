@@ -47,6 +47,9 @@ class Grocery(models.Model):
     # null/blank because available groceries don't need this
     for_recipe  = models.CharField(max_length=200, null=True, blank=True)
  
+    # quantity → optional quantity of the ingredient (e.g. "2 cups", "3 tsp")
+    quantity    = models.CharField(max_length=100, null=True, blank=True)
+ 
     user        = models.ForeignKey(
         'pages.AppUser',
         on_delete=models.CASCADE,

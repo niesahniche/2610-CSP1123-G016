@@ -99,17 +99,6 @@
                         <li>No ingredients listed.</li>
                     {% endfor %}
                 </ul>
-
-                {% if user.is_authenticated and missing_ingredients.exists %}
-                    <div class="missing_summary">
-                        <p class="missing_label">Missing from your grocery list:</p>
-                        <ul class="missing_list">
-                            {% for ingredient in missing_ingredients %}
-                                <li>{{ ingredient.name }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
             </section>
 
             <!-- 2-STEP INGREDIENT CHECK ─────────────────────────────────

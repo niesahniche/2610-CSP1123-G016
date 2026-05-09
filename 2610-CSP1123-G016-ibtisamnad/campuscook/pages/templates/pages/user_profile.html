@@ -7,7 +7,7 @@
 
 <!-- ── Profile Header ────────────────────────────────────────────────────────
      user          → request.user (AppUser) passed from profile view
-     saved_recipes → SavedRecipe queryset passed from profile view           -->
+     favourite_recipes → FavouriteRecipe queryset passed from profile view           -->
 <div class="profile-header">
   <div class="avatar-wrapper">
     <div class="avatar" id="avatarDisplay">
@@ -29,9 +29,6 @@
     </div>
 
     <div class="profile-actions">
-      <button class="icon-btn" id="heartBtn" onclick="openFavourites()" title="Favourites">
-        ♡<span class="heart-badge" id="heartBadge">0</span>
-      </button>
       <a href="{% url 'grocery' %}" class="icon-btn" title="My Grocery List">🧺</a>
       <button class="btn-edit-profile" onclick="toggleEdit()">✏️ Edit Profile</button>
 
@@ -68,49 +65,87 @@
   </div>
 </div>
 
-<!-- ── My Saved Recipes Grid ─────────────────────────────────────────────────
-     saved_recipes → SavedRecipe queryset from profile view
-       filtered by: SavedRecipe.objects.filter(user=request.user)
-     saved.recipe.id   → PK of Recipe table via SavedRecipe FK
-     saved.recipe.name → name field from Recipe table                        -->
+<!-- ── Two Column Layout ─────────────────────────────────────────────────────
+     LEFT  → My Favourite Recipes
+             favourites → FavouriteRecipe queryset from profile view
+             filtered by: FavouriteRecipe.objects.filter(user=request.user)
+ 
+     RIGHT → Add a Recipe
+             Standalone section — completely separate from favourites
+             links to add_recipe page                                       -->
 <div class="main-content">
-  <div class="section-header">
-    <h2>My Saved Recipes</h2>
-  </div>
-
-  <div class="recipes-grid" id="recipesGrid">
-
-    {% for saved in saved_recipes %}
-      <div
-        class="recipe-card"
-        data-name="{{ saved.recipe.name }}"
-        data-id="{{ saved.recipe.id }}"
-        onclick="window.location.href='{% url 'recipe_detail' saved.recipe.id %}'"
-      >
-        <button class="card-heart" onclick="event.stopPropagation(); toggleFavourite(this)">♡</button>
-        <span class="card-emoji">🍽️</span>
-        <span class="card-label">{{ saved.recipe.name }}</span>
+  <div class="two-col">
+ 
+    <!-- ── LEFT: Favourite Recipes ──────────────────────────────────────────
+         fav.recipe.id   → PK of Recipe via FavouriteRecipe FK
+         fav.recipe.name → name field from Recipe table
+         clicking a card goes to recipe detail page                        -->
+    <section class="profile-section col-left">
+      <div class="col-header">
+        <h2>My Favourites</h2>
+        <a href="{% url 'recipe_list' %}" class="col-link">Browse all →</a>
       </div>
-    {% empty %}
-      <p style="color:#888; font-size:0.9rem;">
-        No saved recipes yet. <a href="{% url 'recipe_list' %}">Browse recipes →</a>
-      </p>
-    {% endfor %}
+ 
+      <div class="fav-list">
+        {% for fav in favourites %}
+          <div
+            class="fav-item"
+            onclick="window.location.href='{% url 'recipe_detail' fav.recipe.id %}'"
+          >
+            <!-- recipe image thumbnail if available -->
+            {% if fav.recipe.image_url %}
+              <img src="{{ fav.recipe.image_url }}" alt="{{ fav.recipe.name }}" class="fav-thumb">
+            {% else %}
+              <div class="fav-thumb fav-thumb-placeholder">🍽️</div>
+            {% endif %}
+ 
+            <div class="fav-info">
+              <span class="fav-name">{{ fav.recipe.name }}</span>
+              <div class="fav-meta">
+                <span>⏱ {{ fav.recipe.cooking_time }} mins</span>
+                <span>🔧 {{ fav.recipe.appliance }}</span>
+              </div>
+            </div>
 
-    <!-- clicking Browse takes user to recipe list to find and save more -->
-    <div class="add-card" onclick="window.location.href='{% url 'recipe_list' %}'">
-      <span class="plus">+</span>
-      <span>Browse Recipes</span>
-    </div>
-
-    <!-- Add Recipe — links to add_recipe page (shown on profile for quick access) -->
-    <div class="add-card" onclick="window.location.href='{% url 'add_recipe' %}'" >
-      <span class="plus">+</span>
-      <span>Add Recipe</span>
-    </div>
-
+            <!-- UNFAVOURITE BUTTON ─────────────────────────────────────────
+                 calls toggle_favourite API (DELETE method)
+                 removes FavouriteRecipe row without page reload            -->
+            <button
+              class="btn-unfav"
+              data-recipe-id="{{ fav.recipe.id }}"
+              onclick="event.stopPropagation(); unfavourite(this, {{ fav.recipe.id }})"
+              title="Remove from favourites"
+            >♥</button>
+          </div>
+ 
+        {% empty %}
+          <p class="empty-msg">
+            No favourite recipes yet.<br>
+            <a href="{% url 'recipe_list' %}">Browse recipes to add some →</a>
+          </p>
+        {% endfor %}
+      </div>
+    </section>
+ 
+    <!-- ── RIGHT: Add a Recipe ──────────────────────────────────────────────
+         Completely separate from favourites — its own section
+         links to add_recipe page                                           -->
+    <section class="profile-section col-right">
+      <div class="col-header">
+        <h2>Add a Recipe</h2>
+      </div>
+ 
+      <div class="add-recipe-panel">
+        <div class="add-recipe-icon">🍳</div>
+        <p>Share your own recipe with the Campus Cook community.</p>
+        <a href="{% url 'add_recipe' %}" class="btn-add-recipe">+ Add New Recipe</a>
+      </div>
+    </section>
+ 
   </div>
 </div>
+ 
+<div class="toast" id="toast"></div>
 
 <!-- ── Favourites Panel (JS only) ────────────────────────────────────────── -->
 <div class="fav-overlay" id="favOverlay" onclick="closeFavourites()"></div>
@@ -286,16 +321,6 @@
     renderFavList();
   }
 
-  function updateHeartBadge() {
-    const count    = Object.keys(favourites).length;
-    const heartBtn = document.getElementById('heartBtn');
-    const badge    = document.getElementById('heartBadge');
-    badge.style.display        = count > 0 ? 'flex' : 'none';
-    badge.textContent          = count;
-    heartBtn.style.color       = count > 0 ? '#e05c7a' : '';
-    heartBtn.style.borderColor = count > 0 ? '#e05c7a' : '';
-  }
-
   function renderFavList() {
     const list  = document.getElementById('favList');
     const empty = document.getElementById('favEmpty');
@@ -310,18 +335,35 @@
       </div>`).join('');
   }
 
-  function removeFavFromPanel(name) {
-    document.querySelectorAll('.recipe-card').forEach(card => {
-      if (card.dataset.name === name) {
-        const btn = card.querySelector('.card-heart');
-        btn.textContent = '♡';
-        btn.classList.remove('active');
-      }
-    });
-    delete favourites[name];
-    updateHeartBadge();
-    renderFavList();
-    showToast(`"${name}" removed`);
+  // ── Unfavourite from profile page ─────────────────────────────────────────
+  // Sends DELETE to toggle_favourite API
+  // Removes card from DOM without page reload
+  async function unfavourite(btn, recipeId) {
+    try {
+      const res = await fetch(`/api/toggle-favourite/${recipeId}/`, {
+        method:  'DELETE',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      });
+      if (!res.ok) throw new Error();
+ 
+      // remove the card from the DOM
+      const card = btn.closest('.fav-item');
+      card.style.transition = 'opacity 0.3s';
+      card.style.opacity    = '0';
+      setTimeout(() => {
+        card.remove();
+        // show empty message if no favourites left
+        const list = document.querySelector('.fav-list');
+        if (!list.querySelector('.fav-item')) {
+          list.innerHTML = `<p class="empty-msg">No favourite recipes yet.<br>
+            <a href="{% url 'recipe_list' %}">Browse recipes to add some →</a></p>`;
+        }
+      }, 300);
+ 
+      showToast('Removed from favourites');
+    } catch {
+      showToast('Could not remove. Try again.');
+    }
   }
 
   function openFavourites()  { document.getElementById('favPanel').classList.add('open'); document.getElementById('favOverlay').classList.add('open'); }
@@ -348,6 +390,12 @@
       document.getElementById('avatarEmoji').style.display = 'none';
     };
     reader.readAsDataURL(file);
+  }
+
+    function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
   function showToast(msg) {

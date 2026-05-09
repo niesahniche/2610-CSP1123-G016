@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import AppUser, Recipe, Grocery, SavedRecipe, Comment, RecipeFilter
+from .models import AppUser, FavouriteRecipe, Recipe, Ingredient, Grocery, Comment, RecipeFilter
 
 # ── AppUser ───────────────────────────────────────────────────────────────────
 @admin.register(AppUser)
@@ -40,6 +40,14 @@ class RecipeAdmin(admin.ModelAdmin):
         return qs.filter(user=request.user)
  
  
+# ── Ingredient ────────────────────────────────────────────────────────────────
+@admin.register(Ingredient)
+class IngredientAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+    ordering = ('name',)
+ 
+ 
 # ── Grocery ───────────────────────────────────────────────────────────────────
 @admin.register(Grocery)
 class GroceryAdmin(admin.ModelAdmin):
@@ -53,9 +61,9 @@ class GroceryAdmin(admin.ModelAdmin):
         return qs.filter(user=request.user)
  
  
-# ── SavedRecipe ───────────────────────────────────────────────────────────────
-@admin.register(SavedRecipe)
-class SavedRecipeAdmin(admin.ModelAdmin):
+# ── FavouriteRecipe ───────────────────────────────────────────────────────────────
+@admin.register(FavouriteRecipe)
+class FavouriteRecipeAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
  
     def get_queryset(self, request):

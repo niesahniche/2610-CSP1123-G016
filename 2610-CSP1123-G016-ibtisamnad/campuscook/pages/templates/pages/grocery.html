@@ -7,10 +7,56 @@
 
   <form method="POST" class="add_form">
     {% csrf_token %}
-    <input type="text" name="name" placeholder="Ingredient name (e.g. Eggs)" required/>
-    <input type="number" name="quantity" min="1" value="1" placeholder="Qty"/>
-    <input type="text" name="custom_name" placeholder="Custom label (optional)"/>
-    <button type="submit">Add Item</button>
+    
+    <!-- Ingredient dropdown with Select2 -->
+    <div class="form_group_select">
+      <select name="ingredient_id" id="ingredient_select" class="ingredient_select_dropdown">
+        <option value="">-- Select ingredient --</option>
+        {% for ingredient in all_ingredients %}
+          <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <!-- Quantity dropdown -->
+    <select name="quantity" id="quantity_select" class="form_input_quantity">
+      <option value="1" selected>1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+    </select>
+    
+    <!-- Custom name (optional) -->
+    <input type="text" name="custom_name" placeholder="Custom label (optional)" class="form_input"/>
+    
+    <!-- Button to add from dropdown -->
+    <button type="submit" name="action" value="add_from_dropdown" class="form_btn">
+      <span class="btn_icon">+</span> Add from List
+    </button>
+  </form>
+
+  <!-- New ingredients input -->
+  <form method="POST" class="new_ingredients_form">
+    {% csrf_token %}
+    
+    <input 
+      type="text" 
+      id="new_ingredients_input"
+      name="new_ingredients" 
+      placeholder="Add new ingredients (separate with commas)" 
+      class="form_input_full"
+    />
+    <div id="new_ingredients_tags" class="ingredients_tags"></div>
+    
+    <button type="submit" name="action" value="add_new_ingredients" class="form_btn_secondary">
+      <span class="btn_icon">+</span> Add New
+    </button>
   </form>
 
   <div class="grocery_sections">
@@ -23,9 +69,9 @@
         {% for item in available %}
           <li class="grocery_item">
             <div class="item_info">
-              <span class="item_quantity">{{ item.quantity }}x</span>
               <span class="item_name">{{ item.name }}</span>
               {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+              {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
             </div>
             <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
           </li>
@@ -45,9 +91,11 @@
             <div class="item_info">
               <span class="item_quantity">{{ item.quantity }}x</span>
               <span class="item_name">{{ item.name }}</span>
+              {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
               {% if item.for_recipe %}
                 <span class="item_for">needed for: {{ item.for_recipe }}</span>
               {% endif %}
+              {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
             </div>
             <div class="item_actions">
               <a href="{% url 'remove_item' item.id %}" class="btn_got_it">Got it ✓</a>
@@ -66,34 +114,242 @@
 <style>
   .grocery_page { max-width: 800px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
   .grocery_page h1 { font-size: 1.8rem; font-weight: 700; color: #2c2520; margin-bottom: 1.5rem; border-bottom: 2px solid #e0d5c1; padding-bottom: 0.8rem; }
-  .add_form { display: flex; gap: 0.6rem; flex-wrap: wrap; background: #fff; border: 1.5px solid #e0d5c1; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 2rem; align-items: center; }
-  .add_form input[type="text"],
-  .add_form input[type="number"] { flex: 1; min-width: 140px; padding: 0.6rem 0.9rem; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.9rem; outline: none; }
-  .add_form input[type="number"] { max-width: 110px; }
-  .add_form input:focus { border-color: #6ac383; }
-  .add_form button { padding: 0.6rem 1.2rem; background: #96D4AA; color: #fff; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
-  .add_form button:hover { background: #6ac383; }
+  
+  /* Add form styling */
+  .add_form { 
+    display: flex; 
+    gap: 0.8rem; 
+    flex-wrap: wrap; 
+    background: linear-gradient(135deg, #fff 0%, #faf6f0 100%); 
+    border: 1.5px solid #e0d5c1; 
+    border-radius: 10px; 
+    padding: 1.2rem; 
+    margin-bottom: 1.5rem; 
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Select2 dropdown styling */
+  .form_group_select { flex: 1.5; min-width: 200px; }
+  .ingredient_select_dropdown { 
+    width: 100%; 
+    padding: 0.6rem 0.9rem; 
+    border: 1.5px solid #ccc; 
+    border-radius: 7px; 
+    font-size: 0.9rem; 
+    outline: none;
+    background: white;
+  }
+  .ingredient_select_dropdown:focus { border-color: #6ac383; }
+  
+  /* Quantity input */
+  .form_input_quantity { 
+    flex: 0.9; 
+    min-width: 120px; 
+    padding: 0.6rem 0.9rem; 
+    border: 1.5px solid #ccc; 
+    border-radius: 7px; 
+    font-size: 0.9rem; 
+    outline: none;
+  }
+  .form_input_quantity:focus { border-color: #6ac383; }
+  
+  .form_input { 
+    flex: 1; 
+    min-width: 140px; 
+    padding: 0.6rem 0.9rem; 
+    border: 1.5px solid #ccc; 
+    border-radius: 7px; 
+    font-size: 0.9rem; 
+    outline: none; 
+  }
+  .form_input:focus { border-color: #6ac383; }
+  
+  .form_btn { 
+    padding: 0.6rem 1.2rem; 
+    background: linear-gradient(135deg, #96D4AA 0%, #6ac383 100%); 
+    color: #fff; 
+    border: none; 
+    border-radius: 7px; 
+    font-size: 0.9rem; 
+    font-weight: 600; 
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 6px rgba(106, 195, 131, 0.2);
+  }
+  .form_btn:hover { 
+    background: linear-gradient(135deg, #6ac383 0%, #5ab070 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(106, 195, 131, 0.3);
+  }
+  .btn_icon { font-size: 1.1rem; font-weight: bold; }
+  
+  .new_ingredients_form { 
+    background: linear-gradient(135deg, #fff 0%, #faf6f0 100%); 
+    border: 1.5px solid #e0d5c1; 
+    border-radius: 10px; 
+    padding: 1.2rem; 
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  .form_input_full { 
+    width: 100%; 
+    padding: 0.6rem 0.9rem; 
+    border: 1.5px solid #ccc; 
+    border-radius: 7px; 
+    font-size: 0.9rem; 
+    outline: none; 
+    margin-bottom: 0.6rem; 
+  }
+  .form_input_full:focus { border-color: #6ac383; }
+  .ingredients_tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+  .ingredient_tag { 
+    background: linear-gradient(135deg, #f0faf4 0%, #e8f5f0 100%); 
+    color: #2d6a4f; 
+    border: 1.5px solid #6ac383; 
+    border-radius: 20px; 
+    padding: 0.35rem 0.9rem; 
+    font-size: 0.8rem; 
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(106, 195, 131, 0.15);
+  }
+  .form_btn_secondary { 
+    padding: 0.6rem 1.2rem; 
+    background: linear-gradient(135deg, #e8f4f0 0%, #d0ebe6 100%); 
+    color: #2d6a4f; 
+    border: 1.5px solid #6ac383; 
+    border-radius: 7px; 
+    font-size: 0.9rem; 
+    font-weight: 600; 
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 6px rgba(106, 195, 131, 0.15);
+  }
+  .form_btn_secondary:hover { 
+    background: linear-gradient(135deg, #d0ebe6 0%, #b8dfe0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(106, 195, 131, 0.25);
+  }
+  
   .grocery_sections { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
   @media (max-width: 600px) { .grocery_sections { grid-template-columns: 1fr; } }
-  .grocery_section { background: #fff; border: 1.5px solid #e0d5c1; border-radius: 12px; padding: 1.2rem; }
+  .grocery_section { 
+    background: linear-gradient(135deg, #fff 0%, #faf6f0 100%); 
+    border: 1.5px solid #e0d5c1; 
+    border-radius: 12px; 
+    padding: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
   .section_heading { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid; }
   .available_heading { color: #2d6a4f; border-color: #6ac383; }
   .missing_heading   { color: #b85c38; border-color: #e6a817; }
   .count { font-size: 0.8rem; font-weight: 400; color: #888; }
   .grocery_list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
-  .grocery_item { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.8rem; border: 1px solid #f0ece4; border-radius: 8px; background: #faf6f0; flex-wrap: wrap; }
-  .missing_item { background: #fff8f5; border-color: #f5ddd4; }
-  .item_info { display: flex; align-items: center; gap: 0.5rem; flex: 1; flex-wrap: wrap; }
-  .item_quantity { font-size: 0.85rem; font-weight: 700; color: #2d6a4f; }
+  .grocery_item { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 0.6rem; 
+    padding: 0.8rem; 
+    border: 1.5px solid #f0ece4; 
+    border-radius: 8px; 
+    background: linear-gradient(135deg, #faf6f0 0%, #f5f1eb 100%);
+    flex-wrap: wrap;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .grocery_item:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+  .missing_item { background: linear-gradient(135deg, #fff8f5 0%, #fdf2ec 100%); border-color: #f5ddd4; }
+  .item_info { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
   .item_name   { font-size: 0.9rem; font-weight: 600; color: #2c2520; }
   .item_custom { font-size: 0.78rem; color: #888; }
+  .item_quantity { font-size: 0.8rem; color: #6ac383; font-weight: 500; background: rgba(106, 195, 131, 0.1); padding: 0.1rem 0.5rem; border-radius: 4px; display: inline-block; width: fit-content; }
   .item_for    { font-size: 0.75rem; color: #b85c38; font-style: italic; }
   .item_actions { display: flex; gap: 0.4rem; }
-  .btn_remove { font-size: 0.75rem; color: #b85c38; text-decoration: none; padding: 0.2rem 0.6rem; border: 1px solid #f0b4ae; border-radius: 5px; }
-  .btn_remove:hover { background: #fdf0ee; }
-  .btn_got_it { font-size: 0.75rem; color: #2d6a4f; text-decoration: none; padding: 0.2rem 0.6rem; border: 1px solid #6ac383; border-radius: 5px; background: #f0faf4; }
-  .btn_got_it:hover { background: #6ac383; color: #fff; }
+  .btn_remove { 
+    font-size: 0.75rem; 
+    color: #b85c38; 
+    text-decoration: none; 
+    padding: 0.3rem 0.7rem; 
+    border: 1px solid #f0b4ae; 
+    border-radius: 5px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .btn_remove:hover { background: #fdf0ee; color: #d64a3d; }
+  .btn_got_it { 
+    font-size: 0.75rem; 
+    color: #2d6a4f; 
+    text-decoration: none; 
+    padding: 0.3rem 0.7rem; 
+    border: 1px solid #6ac383; 
+    border-radius: 5px; 
+    background: linear-gradient(135deg, #f0faf4 0%, #e8f5f0 100%);
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .btn_got_it:hover { 
+    background: linear-gradient(135deg, #6ac383 0%, #5ab070 100%); 
+    color: #fff; 
+  }
   .empty_msg { font-size: 0.85rem; color: #aaa; font-style: italic; padding: 0.4rem 0; }
+
+  /* Select2 custom styling */
+  .select2-container--default .select2-selection--single {
+    border: 1.5px solid #ccc !important;
+    border-radius: 7px !important;
+    height: 38px;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #111;
+    padding: 0.4rem 0.8rem;
+  }
+  .select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #6ac383 !important;
+    box-shadow: 0 0 0 3px rgba(106, 195, 131, 0.15) !important;
+  }
+  .select2-dropdown {
+    border-color: #6ac383 !important;
+  }
+  .select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1.5px solid #ccc !important;
+    border-radius: 4px !important;
+  }
+  .select2-results__option--highlighted {
+    background-color: #96D4AA !important;
+  }
 </style>
+
+<script>
+  // Initialize Select2 with autocomplete
+  document.addEventListener('DOMContentLoaded', function() {
+    $('#ingredient_select').select2({
+      placeholder: '-- Select or search ingredient --',
+      allowClear: true,
+      width: '100%',
+      containerCssClass: 'select2-container-custom'
+    });
+  });
+
+  // Handle new ingredients preview
+  document.getElementById('new_ingredients_input').addEventListener('input', function () {
+    const tagContainer = document.getElementById('new_ingredients_tags');
+    const names = this.value.split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    
+    tagContainer.innerHTML = names
+      .map(name => `<span class="ingredient_tag">+ ${name}</span>`)
+      .join('');
+  });
+</script>
 
 {% endblock %}

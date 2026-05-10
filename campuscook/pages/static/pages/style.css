@@ -1,0 +1,77 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+
+/* Parent container to hold both boxes side by side */
+.container {
+  display: flex;
+  gap: 20px; /* space between boxes */
+}
+
+.grocery-box {
+  padding: 15px;
+  width: 600px;
+  height: 500px;
+  border: 2px solid #333;
+
+}
+
+.grocery-box h2 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.grocery-list {
+  list-style-type: decimal; /* numbers on the left */
+  padding-left: 20px;
+}
+
+.grocery-list li {
+  display: flex;              /* allow text + button on same line */
+  justify-content: space-between; /* push button to right side */
+  align-items: center;
+  margin: 8px 0;
+}
+
+.grocery-list li button {
+  background: none;
+  border: none;
+  color: #c00;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Preset items box aligned to the right */
+.preset-items {
+  padding: 15px;
+  width: 600px;
+  height: 500px;
+  border: 2px solid #333;
+
+}
+
+.btn {
+  background-color: #ffffff;   /* warm yellow */
+  border: 1px solid #333;     
+  margin: 5px;    /* dark border */
+  border-radius: 8px;
+  padding: 20px 32px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}

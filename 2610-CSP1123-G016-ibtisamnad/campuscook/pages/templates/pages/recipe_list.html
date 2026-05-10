@@ -1,0 +1,309 @@
+<!--- havent added function for user input -->
+<!--- need to add search functionalityand pagination -->
+<!--- hardcoded, turn to dynamic with database later -->
+<!--- filters function will be its own page separate from search; search macam search biasa -->
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<main class="recipe_list">
+
+    <!-- SEARCH BAR ──────────────────────────────────────────────────────
+         search query goes to recipe_list view which filters Recipe table
+         by recipe.name (icontains = case-insensitive partial match)     -->
+    <form action="{% url 'recipe_list' %}" method="GET" class="search_form">
+        <input
+            type="text"
+            name="search"
+            class="search_input"
+            placeholder="Search recipes..."
+            value="{{ request.GET.search }}"
+        >
+        <button type="submit" class="search_btn">Search</button>
+    </form>
+
+    <!-- FILTER LINK ─────────────────────────────────────────────────────
+         links to recipe_filter page                                      -->
+    <div class="filter_link_wrap">
+        {% if user.is_authenticated %}
+        <a href="{% url 'recipe_filter' %}" class="btn_filter_page">
+            🔍 Filter Recipes
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- RECIPE CARDS ────────────────────────────────────────────────────
+         loops through Recipe table rows passed from recipe_list view
+         recipe.id   → PK of Recipe table
+         recipe.name → name field in Recipe table                        -->
+    <section class="recipe_cards">
+
+        {% for recipe in recipes %}
+            <article class="card">
+
+                <!-- recipe.name → name field from Recipe table -->
+                <h2>{{ recipe.name }}</h2>
+
+                <div class="card_image_wrap">
+                    <!-- links to recipe detail page using recipe.id as PK -->
+                    <a href="{% url 'recipe_detail' recipe.id %}">
+                        {% if recipe.image_url %}
+                            <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" class="card_image">
+                        {% else %}
+                            <div class="card_image_placeholder"></div>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <!-- cooking_time and appliance → fields from Recipe table -->
+                <p>⏱ {{ recipe.cooking_time }} mins | 🔧 {{ recipe.appliance }}</p>
+
+                <!-- Favourite BUTTON ──────────────────────────────────────────────
+                     data-recipe-id="{{ recipe.id }}" → PK from Recipe table
+                     onclick sends POST to /api/favourite-recipes/
+                     Django stores: FavouriteRecipe(recipe_id=recipe.id, user=user) -->
+                <div class="card_actions">
+                    {% if user.is_authenticated %}
+                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
+                    {% endif %}
+
+                    {% if user.is_authenticated %}
+                    <button class="btn_action btn_fav {% if recipe.id in fav_ids %}btn_fav_active{% endif %}"
+                    data-recipe-id="{{ recipe.id }}" 
+                    data-fav="{% if recipe.id in fav_ids %}true{% else %}false{% endif %}"
+                    onclick="toggleFav(this)"
+                    title="{% if recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
+                    >
+                    {% if recipe.id in fav_ids %}♥ Favourited{% else %}♡ Favourite{% endif %}
+                    </button>
+                    {% endif %}
+
+                    <button class="btn_action btn_share" data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' recipe.id %}" onclick="shareRecipe(this)">🔗 Share</button>
+                </div>
+
+                <a href="{% url 'recipe_detail' recipe.id %}" class="recipe_link">
+                    View Recipe →
+                </a>
+
+            </article>
+        {% empty %}
+            <p>No recipes found.</p>
+        {% endfor %}
+
+    </section>
+
+    <!-- PAGINATION ───────────────────────────────────────────────────────
+         recipes is a Page object from Paginator in views.py (6 per page) -->
+    {% if recipes.has_other_pages %}
+        <div class="pagination">
+            {% if recipes.has_previous %}
+                <a href="?page={{ recipes.previous_page_number }}">← Prev</a>
+            {% endif %}
+            <span>Page {{ recipes.number }} of {{ recipes.paginator.num_pages }}</span>
+            {% if recipes.has_next %}
+                <a href="?page={{ recipes.next_page_number }}">Next →</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- To Make Popup -->
+        <div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
+        <div class="popup" id="popup">
+            <button class="popup-close" onclick="closePopup()">✕</button>
+            <div id="popupContent"></div>
+        </div>
+<div class="toast" id="toast"></div>
+
+</main>
+
+<style>
+  .card_actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0 0.4rem; }
+  .btn_action { padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; border-radius: 6px; border: 1.5px solid; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+  .btn_check  { background: #f0faf4; color: #2d6a4f; border-color: #6ac383; }
+  .btn_check:hover { background: #6ac383; color: #fff; }
+  .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
+  .btn_tomake:hover { background: #e6a817; color: #fff; }
+  .btn_fav   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
+  .btn_fav:hover { background: #9b72d4; color: #fff; }
+  .btn_favourited  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
+  .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
+  .btn_share:hover { background: #6488d4; color: #fff; }
+  .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
+  .popup-overlay.open { display: block; }
+  .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border-radius: 16px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .popup.open { display: block; }
+  .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
+  .popup-icon  { font-size: 2.5rem; text-align: center; margin-bottom: 0.8rem; }
+  .popup-title { font-size: 1.2rem; font-weight: 800; color: #2c2520; margin-bottom: 0.5rem; text-align: center; }
+  .popup-msg   { font-size: 0.88rem; color: #666; text-align: center; margin-bottom: 1.2rem; }
+  .ingredient-section { margin-bottom: 1rem; }
+  .ingredient-section h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+  .ingredient-section.available h4 { color: #2d6a4f; }
+  .ingredient-section.missing  h4  { color: #b85c38; }
+  .ingredient-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+  .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
+  .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
+  .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
+  .popup-btn { display: block; width: 100%; padding: 0.75rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s; }
+  .popup-btn:hover { background: #6ac383; }
+  .popup-btn.secondary { background: #fff; color: #555; border: 1.5px solid #ddd; margin-top: 0.4rem; }
+  .popup-btn.secondary:hover { border-color: #6ac383; color: #2d6a4f; }
+  .toast { position: fixed; bottom: 28px; right: 28px; background: #2c2520; color: #fff; padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; transform: none; }
+  .toast.success { background: #2d6a4f; }
+  .toast.error   { background: #b85c38; }
+</style>
+
+<!-- Favourite RECIPE SCRIPT ───────────────────────────────────────────────────────
+     Sends POST to /api/favourite-recipes/ → favourite_recipe view → FavouriteRecipe table -->
+<script>
+    // fav_ids → recipe PKs already favourited by this user
+    // pre-loaded from DB so hearts show correct state on page load
+    const FAV_IDS = new Set({{ fav_ids|safe }});
+ 
+    // ── Toggle Favourite ──────────────────────────────────────────────────────
+    // POST to favourite, DELETE to unfavourite
+    // button state updates immediately without page reload
+    async function toggleFav(btn) {
+        const recipeId = btn.dataset.recipeId;
+        const isFav    = btn.dataset.fav === 'true';
+        const method   = isFav ? 'DELETE' : 'POST';
+ 
+        try {
+            const res = await fetch(`/api/toggle-favourite/${recipeId}/`, {
+                method,
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            });
+            if (!res.ok) throw new Error();
+ 
+            if (isFav) {
+                // unfavourited
+                btn.dataset.fav   = 'false';
+                btn.textContent   = '♡ Favourite';
+                btn.classList.remove('btn_fav_active');
+                btn.title         = 'Favourite';
+                showToast('Removed from favourites', '');
+            } else {
+                // favourited
+                btn.dataset.fav   = 'true';
+                btn.textContent   = '♥ Favourited';
+                btn.classList.add('btn_fav_active');
+                btn.title         = 'Unfavourite';
+                showToast('Added to favourites ♥', 'success');
+            }
+        } catch {
+            showToast('Could not update. Try again.', 'error');
+        }
+    }
+ 
+    // ── Share Recipe ──────────────────────────────────────────────────────────
+    async function shareRecipe(btn) {
+        const url = btn.dataset.url;
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Link copied to clipboard! 🔗', 'success');
+        } catch {
+            const input = document.createElement('input');
+            input.value = url; document.body.appendChild(input);
+            input.select(); document.execCommand('copy');
+            document.body.removeChild(input);
+            showToast('Link copied! 🔗', 'success');
+        }
+    }
+ 
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+ 
+    function showToast(msg, type = '') {
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.className = `toast show ${type}`;
+        setTimeout(() => { t.className = 'toast'; }, 3000);
+    }
+
+    async function step1CheckIngredients(btn) {
+    const recipeId = btn.dataset.recipeId;
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    try {
+        const res = await fetch(`/api/check-ingredients/${recipeId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        showStep1Popup(data);
+    } catch {
+        showToast('Could not check ingredients. Try again.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🍳 To Make';
+    }
+}
+
+function showStep1Popup(data) {
+    const available = data.available || [];
+    const missing   = data.missing   || [];
+    const availableHtml = available.length ? `
+        <div class="ingredient-section available">
+            <h4>✅ You have these (${available.length})</h4>
+            <ul class="ingredient-list">${available.map(n => `<li>${n}</li>`).join('')}</ul>
+        </div>` : '';
+    const missingHtml = missing.length ? `
+        <div class="ingredient-section missing">
+            <h4>❌ You're missing these (${missing.length})</h4>
+            <ul class="ingredient-list">${missing.map(n => `<li>${n}</li>`).join('')}</ul>
+        </div>` : '';
+    document.getElementById('popupContent').innerHTML = `
+        <div class="popup-icon">${data.can_cook ? '🎉' : '🛒'}</div>
+        <div class="popup-title">${data.can_cook ? 'You have everything!' : 'Some ingredients missing'}</div>
+        <div class="popup-msg">${data.can_cook
+            ? `You can make <strong>${data.recipe}</strong> with what you have.`
+            : `You're missing some ingredients for <strong>${data.recipe}</strong>.`}</div>
+        ${availableHtml}
+        ${missingHtml}
+        <button class="popup-btn" onclick="step2AddToGrocery(${data.recipe_id})">
+            ${data.can_cook ? '✅ Add to grocery list' : '🛒 Add all to grocery list (missing flagged)'}
+        </button>
+        <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+    `;
+    openPopup();
+}
+
+async function step2AddToGrocery(recipeId) {
+    try {
+        const res = await fetch(`/api/add-ingredients/${recipeId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        document.getElementById('popupContent').innerHTML = `
+            <div class="popup-icon">✅</div>
+            <div class="popup-title">Grocery list updated!</div>
+            <div class="popup-msg">${data.can_cook
+                ? `All ingredients for <strong>${data.recipe}</strong> are in your grocery list.`
+                : `<strong>${data.added_missing.length}</strong> missing ingredient(s) added to your grocery list.`}</div>
+            <a href="/grocery/" class="popup-btn">View Grocery List</a>
+            <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+        `;
+    } catch {
+        showToast('Could not update grocery list. Try again.', 'error');
+    }
+}
+
+function openPopup() {
+    document.getElementById('popup').classList.add('open');
+    document.getElementById('popupOverlay').classList.add('open');
+}
+
+function closePopup() {
+    document.getElementById('popup').classList.remove('open');
+    document.getElementById('popupOverlay').classList.remove('open');
+}
+
+</script>
+
+{% endblock %}

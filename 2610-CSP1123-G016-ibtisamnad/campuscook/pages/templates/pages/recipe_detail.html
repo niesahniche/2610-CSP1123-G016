@@ -1,0 +1,364 @@
+<!--- hardcode only the layout and let the details appear later once database and id for recipes are given-->
+<!--- need : title, description, ingredients, time, cost/budget, instructions, appliances used, rating -->
+<!--- cannot be fully hardcoded as it needs recipe.id (Primary key) to show specific details -->
+<!--- have not been linked yet as data is not proper (no primary key in hardcoded recipe_list) -->
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<main class="recipe_detail">
+
+    <!-- BACK NAVIGATION ─────────────────────────────────────────────────── -->
+    <nav class="detail_nav">
+        <a href="{% url 'recipe_list' %}" class="back_link">← Back to Recipes</a>
+        <a href="{% url 'recipe_filter' %}" class="filter_link">Filter Recipes</a>
+    </nav>
+
+    <article class="detail_card">
+
+        <div class="detail_body">
+
+            <!-- recipe image — shown if image_url exists -->
+            {% if recipe.image_url %}
+                <div class="detail_image_wrap">
+                    <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" class="detail_image">
+                </div>
+            {% endif %}
+
+            <!-- TITLE + FAVOURITE BUTTON ─────────────────────────────────────────
+                 recipe.name → name field from Recipe table (not 'title')
+                 recipe.id   → PK from Recipe table, passed to favourite button   -->
+            <div class="detail_title_row">
+                <h1 class="detail_title">{{ recipe.name }}</h1>
+                <div class="detail_actions">
+                    {% if user.is_authenticated %}
+                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
+                    {% endif %}
+                    {% if user.is_authenticated %}
+                    <button class="btn_action btn_fav {% if is_fav %}btn_fav_active{% endif %}" 
+                    data-recipe-id="{{ recipe.id }}" 
+                    data-fav="{% if is_fav %}true{% else %}false{% endif %}" 
+                    onclick="toggleFav(this)">
+                        {% if is_fav %}♥ Favourited{% else %}♡ Favourite{% endif %}
+                    </button>
+                    {% endif %}
+                    <button class="btn_action btn_share" 
+                    data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' recipe.id %}" 
+                    onclick="shareRecipe(this)">🔗 Share
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAGS ROW ────────────────────────────────────────────────────
+                 cooking_time → IntegerField in Recipe table
+                 appliance    → CharField in Recipe table
+
+                 ── fields below don't exist in models.py yet ────────────────
+                 category, budget, is_halal are commented out until you add
+                 them to Recipe model and run migrations                      -->
+            <div class="detail_tags">
+
+                <!-- cooking_time → Recipe table IntegerField -->
+                <span class="recipe_time">
+                    ⏱ {{ recipe.cooking_time }} mins
+                </span>
+
+                <!-- appliance → Recipe table CharField -->
+                <span class="recipe_appliance">
+                    🔧 {{ recipe.appliance }}
+                </span>
+
+                <!-- ── uncomment when added to models.py ──────────────────
+                <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}"
+                    class="recipe_category tag_link">
+                    📂 {{ recipe.get_category_display }}
+                </a>
+                <a href="{% url 'recipe_filter' %}?budget={{ recipe.budget }}"
+                    class="recipe_budget tag_link">
+                    💰 {{ recipe.get_budget_display }}
+                </a>
+                {% if recipe.is_halal %}
+                    <a href="{% url 'recipe_filter' %}?halal=true" class="recipe_halal tag_link">✅ Halal</a>
+                {% else %}
+                    <a href="{% url 'recipe_filter' %}?halal=false" class="recipe_nonhalal tag_link">❌ Non-Halal</a>
+                {% endif %}
+                ─────────────────────────────────────────────────────────── -->
+
+            </div>
+
+            <!-- INGREDIENTS SECTION ─────────────────────────────────────────
+                 recipe.ingredients → ManyToManyField to Ingredient table
+                 loops through all Ingredient rows linked to this recipe      -->
+            <section class="detail_section">
+                <h2 class="section_title">Ingredients 🛒</h2>
+                <ul>
+                    {% for ingredient in recipe.ingredients.all %}
+                        <!-- ingredient.name → name field from Ingredient table -->
+                        <li>{{ ingredient.name }}</li>
+                    {% empty %}
+                        <li>No ingredients listed.</li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <!-- 2-STEP INGREDIENT CHECK ─────────────────────────────────
+                     Only shown to logged-in users.
+                     Step 1: "Check my ingredients" button
+                             → calls check_ingredients API
+                             → shows popup with available/missing split
+                             → nothing added to grocery yet
+                     Step 2: "Add to Grocery List" button inside popup
+                             → calls add_ingredients API
+                             → adds available (confirmed) + missing to grocery
+                             → shows final confirmation                      -->
+            {% if user.is_authenticated and recipe.ingredients.count > 0 %}
+                <button
+                    class="btn_check_ingredients"
+                    data-recipe-id="{{ recipe.id }}"
+                    onclick="step1CheckIngredients(this)"
+                >
+                    🛒 Check my ingredients
+                </button>
+            {% endif %}
+
+            <!-- INSTRUCTIONS SECTION ────────────────────────────────────────
+                 recipe.instructions → TextField from Recipe table            -->
+            <section class="detail_section">
+                <h2 class="section_title">Instructions 👩‍🍳</h2>
+                <p class="detail_instructions">{{ recipe.instructions }}</p>
+            </section>
+
+            <!-- BOTTOM NAVIGATION ───────────────────────────────────────────-->
+            <div class="detail_footer_links">
+                <a href="{% url 'recipe_list' %}" class="back_link">← Back to All Recipes</a>
+                <a href="{% url 'recipe_filter' %}" class="filter_link">Filter Recipes →</a>
+            </div>
+
+            <!-- To Make Popup -->
+            <div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
+            <div class="popup" id="popup">
+                <button class="popup-close" onclick="closePopup()">✕</button>
+                <div id="popupContent"></div>
+            </div>
+            <div class="toast" id="toast"></div>
+
+        </div>
+    </article>
+
+</main>
+
+<style>
+    .card_actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0 0.4rem; }
+    .btn_action { padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; border-radius: 6px; border: 1.5px solid; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+    .btn_check  { background: #f0faf4; color: #2d6a4f; border-color: #6ac383; }
+    .btn_check:hover { background: #6ac383; color: #fff; }
+    .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
+    .btn_tomake:hover { background: #e6a817; color: #fff; }
+    .btn_favourited   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
+    .btn_favourited:hover { background: #9b72d4; color: #fff; }
+    .btn_favourited  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
+    .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
+    .btn_share:hover { background: #6488d4; color: #fff; }
+    .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
+    .popup-overlay.open { display: block; }
+    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border-radius: 16px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .popup.open { display: block; }
+    .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
+    .popup-icon  { font-size: 2.5rem; text-align: center; margin-bottom: 0.8rem; }
+    .popup-title { font-size: 1.2rem; font-weight: 800; color: #2c2520; margin-bottom: 0.5rem; text-align: center; }
+    .popup-msg   { font-size: 0.88rem; color: #666; text-align: center; margin-bottom: 1.2rem; }
+    .ingredient-section { margin-bottom: 1rem; }
+    .ingredient-section h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .ingredient-section.available h4 { color: #2d6a4f; }
+    .ingredient-section.missing  h4  { color: #b85c38; }
+    .ingredient-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+    .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
+    .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
+    .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
+    .missing_summary { margin-top: 1rem; padding: 1rem; border: 1px solid #f5ddd4; border-radius: 10px; background: #fff8f5; }
+    .missing_label { font-size: 0.9rem; font-weight: 700; color: #b85c38; margin-bottom: 0.6rem; }
+    .missing_list { list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+    .missing_list li { padding: 0.35rem 0.65rem; border-radius: 6px; background: #fff3ee; color: #b85c38; }
+    .popup-btn { display: block; width: 100%; padding: 0.75rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s; }
+    .popup-btn:hover { background: #6ac383; }
+    .popup-btn.secondary { background: #fff; color: #555; border: 1.5px solid #ddd; margin-top: 0.4rem; }
+    .popup-btn.secondary:hover { border-color: #6ac383; color: #2d6a4f; }
+    .toast { position: fixed; bottom: 28px; right: 28px; background: #2c2520; color: #fff; padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
+    .toast.show { opacity: 1; transform: none; }
+    .toast.success { background: #2d6a4f; }
+    .toast.error   { background: #b85c38; }
+</style>
+
+<!-- FAVOURITE RECIPE SCRIPT ───────────────────────────────────────────────────────
+     Same script as recipe_list.html — sends POST to favourite_recipe view        -->
+<script>
+    // ── Step 1: Check ingredients — shows results, nothing added yet ──────────
+    async function step1CheckIngredients(btn) {
+        const recipeId = btn.dataset.recipeId;
+        btn.disabled   = true;
+        btn.textContent = 'Checking…';
+ 
+        try {
+            const res  = await fetch(`/api/check-ingredients/${recipeId}/`, {
+                method:  'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            showStep1Popup(data);
+        } catch {
+            showToast('Could not check ingredients. Try again.', 'error');
+        } finally {
+            btn.disabled    = false;
+            btn.textContent = '🛒 Check my ingredients';
+        }
+    }
+ 
+    // ── Render Step 1 popup ───────────────────────────────────────────────────
+    function showStep1Popup(data) {
+        const available = data.available || [];
+        const missing   = data.missing   || [];
+ 
+        const availableHtml = available.length ? `
+            <div class="ingredient-section available">
+                <h4>✅ You have these (${available.length})</h4>
+                <ul class="ingredient-list">
+                    ${available.map(n => `<li>${n}</li>`).join('')}
+                </ul>
+            </div>` : '';
+ 
+        const missingHtml = missing.length ? `
+            <div class="ingredient-section missing">
+                <h4>❌ You're missing these (${missing.length})</h4>
+                <ul class="ingredient-list">
+                    ${missing.map(n => `<li>${n}</li>`).join('')}
+                </ul>
+            </div>` : '';
+ 
+        // Step 2 button only shown if there's something to add
+        const step2Btn = `
+            <button
+                class="popup-btn"
+                onclick="step2AddToGrocery(${data.recipe_id})"
+            >
+                ${data.can_cook
+                    ? '✅ Add available ingredients to grocery list'
+                    : '🛒 Add all to grocery list (missing items flagged)'}
+            </button>`;
+ 
+        document.getElementById('popupContent').innerHTML = `
+            <div class="popup-icon">${data.can_cook ? '🎉' : '🛒'}</div>
+            <div class="popup-title">
+                ${data.can_cook ? 'You have everything!' : 'Some ingredients missing'}
+            </div>
+            <div class="popup-msg">
+                ${data.can_cook
+                    ? `You can make <strong>${data.recipe}</strong> with what you have.`
+                    : `You're missing some ingredients for <strong>${data.recipe}</strong>.`}
+            </div>
+            ${availableHtml}
+            ${missingHtml}
+            ${step2Btn}
+            <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+        `;
+ 
+        openPopup();
+    }
+ 
+    // ── Step 2: User confirmed — add all ingredients to grocery ──────────────
+    // available → added as status='available' (confirmed in hand)
+    // missing   → added as status='missing' with recipe note
+    async function step2AddToGrocery(recipeId) {
+        try {
+            const res  = await fetch(`/api/add-ingredients/${recipeId}/`, {
+                method:  'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+ 
+            // update popup to show confirmation
+            document.getElementById('popupContent').innerHTML = `
+                <div class="popup-icon">✅</div>
+                <div class="popup-title">Grocery list updated!</div>
+                <div class="popup-msg">
+                    ${data.can_cook
+                        ? `All ingredients for <strong>${data.recipe}</strong> are in your grocery list.`
+                        : `<strong>${data.added_missing.length}</strong> missing ingredient(s) added to your grocery list. Check Grocery to see details.`}
+                </div>
+                <a href="/grocery/" class="popup-btn">View Grocery List</a>
+                <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+            `;
+        } catch {
+            showToast('Could not update grocery list. Try again.', 'error');
+        }
+    }
+ 
+    // ── Toggle Favourite ──────────────────────────────────────────────────────
+    async function toggleFav(btn) {
+        const recipeId = btn.dataset.recipeId;
+        const isFav    = btn.dataset.fav === 'true';
+        const method   = isFav ? 'DELETE' : 'POST';
+ 
+        try {
+            const res = await fetch(`/api/toggle-favourite/${recipeId}/`, {
+                method,
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            });
+            if (!res.ok) throw new Error();
+ 
+            if (isFav) {
+                btn.dataset.fav = 'false';
+                btn.textContent = '♡ Favourite';
+                btn.classList.remove('btn_fav_active');
+                showToast('Removed from favourites', '');
+            } else {
+                btn.dataset.fav = 'true';
+                btn.textContent = '♥ Favourited';
+                btn.classList.add('btn_fav_active');
+                showToast('Added to favourites ♥', 'success');
+            }
+        } catch {
+            showToast('Could not update. Try again.', 'error');
+        }
+    }
+ 
+    // ── Share Recipe ──────────────────────────────────────────────────────────
+    async function shareRecipe(btn) {
+        const url = btn.dataset.url;
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Link copied to clipboard! 🔗', 'success');
+        } catch {
+            const input = document.createElement('input');
+            input.value = url; document.body.appendChild(input);
+            input.select(); document.execCommand('copy');
+            document.body.removeChild(input);
+            showToast('Link copied! 🔗', 'success');
+        }
+    }
+ 
+    function openPopup() {
+        document.getElementById('popup').classList.add('open');
+        document.getElementById('popupOverlay').classList.add('open');
+    }
+ 
+    function closePopup() {
+        document.getElementById('popup').classList.remove('open');
+        document.getElementById('popupOverlay').classList.remove('open');
+    }
+ 
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+ 
+    function showToast(msg, type = '') {
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.className = `toast show ${type}`;
+        setTimeout(() => { t.className = 'toast'; }, 3000);
+    }
+</script>
+
+{% endblock %}

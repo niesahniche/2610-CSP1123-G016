@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import AppUserCreationForm, RecipeForm
 import json
 
-from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe
+from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Ingredient
 
 
 # ── Home ──────────────────────────────────────────────────────────────────────
@@ -19,6 +19,19 @@ def home(request):
 # ── About ─────────────────────────────────────────────────────────────────────
 def about(request):
     return render(request, "pages/about.html")
+
+# ── Ingredient search API ─────────────────────────────────────────────────────
+# GET /api/ingredients/?q=chicken
+# Returns matching Ingredient rows as JSON for autocomplete in grocery/add_recipe
+@require_http_methods(['GET'])
+def ingredient_search(request):
+    q = request.GET.get('q', '').strip()
+    if q:
+        ingredients = Ingredient.objects.filter(name__icontains=q).order_by('name')[:20]
+    else:
+        ingredients = Ingredient.objects.all().order_by('name')[:50]
+    data = [{'id': i.id, 'name': i.name} for i in ingredients]
+    return JsonResponse(data, safe=False)
 
 # ── Grocery ───────────────────────────────────────────────────────────────────
 def grocery(request):
@@ -130,6 +143,12 @@ def recipe_list(request):
 
     if search:
         recipes = recipes.filter(name__icontains=search)
+            # search by ingredient name — filters recipes that contain a matching ingredient
+    ingredient_search_q = request.GET.get('ingredient', '')
+    if ingredient_search_q:
+        recipes = recipes.filter(
+            ingredients__name__icontains=ingredient_search_q
+        ).distinct()
     paginator = Paginator(recipes, 6)
     recipes   = paginator.get_page(request.GET.get('page'))
 
@@ -166,6 +185,18 @@ def recipe_filter(request):
     elif time == 'long':
         recipes = recipes.filter(cooking_time__gt=30)
 
+    # halal filter — Recipe.is_halal (BooleanField)
+    halal = request.GET.get('halal', '')
+    if halal == 'true':
+        recipes = recipes.filter(is_halal=True)
+    elif halal == 'false':
+        recipes = recipes.filter(is_halal=False)
+ 
+    # budget filter — Recipe.budget (CharField with choices)
+    budgets = request.GET.getlist('budget')
+    if budgets:
+        recipes = recipes.filter(budget__in=budgets)
+
     return render(request, 'pages/recipe_filter.html', {'recipes': recipes})
 
 
@@ -179,7 +210,7 @@ def recipe_detail(request, id):
 
     return render(request, 'pages/recipe_detail.html', {
         'recipe':              recipe,
-        'is_saved':            is_fav,
+        'is_fav':            is_fav,
     })
 
 # ── Add recipe ────────────────────────────────────────────────────────────────
@@ -190,10 +221,18 @@ def add_recipe(request):
 
     if request.method == 'POST':
         form = RecipeForm(request.POST)
-        custom_ingredients_value = request.POST.get('custom_ingredients', '')
-
-        # set the ingredients queryset to all available ingredients
-        form.fields['ingredients'].queryset = Ingredient.objects.all()
+        # handle custom new ingredients typed in the form
+        # each gets added to global Ingredient table then linked to the recipe
+        custom_raw    = request.POST.get('custom_ingredients', '').strip()
+        new_ingredients = []
+        if custom_raw:
+            for name in custom_raw.split(','):
+                name = name.strip()
+                if name:
+                    ing, _ = Ingredient.objects.get_or_create(
+                        name__iexact=name, defaults={'name': name}
+                    )
+                    new_ingredients.append(ing)
 
         if form.is_valid():
             # create the Recipe row but don't save to DB yet (commit=False)
@@ -206,16 +245,8 @@ def add_recipe(request):
 
             # Handle new ingredients (comma-separated input)
             new_ingredients_str = request.POST.get('new_ingredients', '').strip()
-            if new_ingredients_str:
-                ingredient_names = [name.strip() for name in new_ingredients_str.split(',') if name.strip()]
-                
-                for name in ingredient_names:
-                    # Create Ingredient if it doesn't exist
-                    ingredient, created = Ingredient.objects.get_or_create(name=name)
-                    
-                    # Add to recipe's ingredients
-                    recipe.ingredients.add(ingredient)
-
+            if new_ingredients:
+                recipe.ingredients.add(*new_ingredients)
             messages.success(request, f'"{recipe.name}" has been added!')
             return redirect('recipe_detail', id=recipe.id)
         else:
@@ -351,13 +382,15 @@ def check_ingredients(request, recipe_id):
     recipe_ingredients = recipe.ingredients.all()
     
     # Get ingredient names user has available in their grocery list
-    my_available_names = set(
+    my_available = set(
         Grocery.objects.filter(user=user, status='available')
         .values_list('name', flat=True)
     )
  
-    available = [ing.name for ing in recipe_ingredients if ing.name in my_available_names]
-    missing   = [ing.name for ing in recipe_ingredients if ing.name not in my_available_names]
+    available = [ing.name for ing in recipe_ingredients 
+                 if my_available.filter(name__iexact=ing.name).exists()]
+    missing   = [ing.name for ing in recipe_ingredients 
+                 if not my_available.filter(name__iexact=ing.name).exists()]
  
     return JsonResponse({
         'recipe':    recipe.name,
@@ -380,7 +413,7 @@ def add_ingredients_to_grocery(request, recipe_id):
     recipe_ingredients = recipe.ingredients.all()
     
     # Get ingredient names user has available in their grocery list
-    my_available_names = set(
+    my_available = set(
         Grocery.objects.filter(user=user, status='available')
         .values_list('name', flat=True)
     )
@@ -389,7 +422,7 @@ def add_ingredients_to_grocery(request, recipe_id):
     added_missing   = []
  
     for ing in recipe_ingredients:
-        if ing.name in my_available_names:
+        if ing.name in my_available:
             # user already has this
             added_available.append(ing.name)
         else:

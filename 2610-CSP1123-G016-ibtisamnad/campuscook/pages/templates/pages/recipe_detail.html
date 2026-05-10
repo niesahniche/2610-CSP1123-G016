@@ -68,6 +68,13 @@
                     🔧 {{ recipe.appliance }}
                 </span>
 
+                <span class="recipe_budget">💰 {{ recipe.get_budget_display }}</span>
+                {% if recipe.is_halal %}
+                    <span class="recipe_halal">✅ Halal</span>
+                {% else %}
+                    <span class="recipe_nonhalal">❌ Non-Halal</span>
+                {% endif %}
+
                 <!-- ── uncomment when added to models.py ──────────────────
                 <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}"
                     class="recipe_category tag_link">

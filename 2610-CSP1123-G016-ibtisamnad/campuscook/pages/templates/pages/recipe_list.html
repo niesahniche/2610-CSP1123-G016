@@ -10,7 +10,8 @@
 
     <!-- SEARCH BAR ──────────────────────────────────────────────────────
          search query goes to recipe_list view which filters Recipe table
-         by recipe.name (icontains = case-insensitive partial match)     -->
+         by recipe.name (icontains = case-insensitive partial match)  
+         (-INTEGRATE SEAARCH BAR FOR RECIPE NAME AND INGREDIENT NAME FUNCTIONS TOGETHER-)   -->
     <form action="{% url 'recipe_list' %}" method="GET" class="search_form">
         <input
             type="text"
@@ -20,6 +21,18 @@
             value="{{ request.GET.search }}"
         >
         <button type="submit" class="search_btn">Search</button>
+    </form>
+
+    <!-- Ingredient search -->
+    <form action="{% url 'recipe_list' %}" method="GET" class="search_form">
+        <input
+            type="text"
+            name="ingredient"
+            class="search_input"
+            placeholder="Search by ingredient..."
+            value="{{ request.GET.ingredient }}"
+        >
+        <button type="submit" class="search_btn">🔍</button>
     </form>
 
     <!-- FILTER LINK ─────────────────────────────────────────────────────
@@ -56,8 +69,12 @@
                 </div>
 
                 <!-- cooking_time and appliance → fields from Recipe table -->
-                <p>⏱ {{ recipe.cooking_time }} mins | 🔧 {{ recipe.appliance }}</p>
-
+                <p class="card_meta">⏱ {{ recipe.cooking_time }} mins | 🔧 {{ recipe.appliance }}</p>
+                <p class="card_tags">
+                    💰 {{ recipe.get_budget_display }}
+                    {% if recipe.is_halal %}✅ Halal{% else %}❌ Non-Halal{% endif %}
+                </p>
+                
                 <!-- Favourite BUTTON ──────────────────────────────────────────────
                      data-recipe-id="{{ recipe.id }}" → PK from Recipe table
                      onclick sends POST to /api/favourite-recipes/

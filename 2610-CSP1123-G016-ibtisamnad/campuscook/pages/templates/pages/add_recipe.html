@@ -59,6 +59,25 @@
                 class="form_input"/>
         </div>
 
+        <!-- HALAL — Recipe.is_halal (BooleanField) -->
+        <div class="form_group">
+            <label for="id_is_halal">Halal</label>
+            <select id="id_is_halal" name="is_halal">
+                <option value="True" {% if form.is_halal.value != False %}selected{% endif %}>✅ Halal</option>
+                <option value="False" {% if form.is_halal.value == False %}selected{% endif %}>❌ Non-Halal</option>
+            </select>
+        </div>
+
+        <!-- BUDGET — Recipe.budget (CharField with choices) -->
+        <div class="form_group">
+            <label for="id_budget">Budget Estimate</label>
+            <select id="id_budget" name="budget">
+                <option value="low"    {% if form.budget.value == 'low'    %}selected{% endif %}>Below RM5</option>
+                <option value="medium" {% if form.budget.value == 'medium' %}selected{% endif %}>RM5 – RM15</option>
+                <option value="high"   {% if form.budget.value == 'high'   %}selected{% endif %}>Above RM15</option>
+            </select>
+        </div>       
+
         <!-- COOKING TIME ────────────────────────────────────────────────────
              maps to Recipe.cooking_time (IntegerField) in models.py        -->
         <div class="form_group">

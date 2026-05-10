@@ -19,5 +19,4 @@ class RecipeForm(forms.ModelForm):
     class Meta:
         model  = Recipe
         # user and filters are excluded — user is set automatically in the view
-        fields = ('name', 'cooking_time', 'appliance', 'instructions', 'image_url', 'ingredients')
- 
+        fields = ('name', 'cooking_time', 'appliance', 'instructions', 'image_url', 'ingredients', 'is_halal', 'budget')

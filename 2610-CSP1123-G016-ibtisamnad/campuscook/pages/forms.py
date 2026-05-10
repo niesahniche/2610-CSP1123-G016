@@ -1,6 +1,6 @@
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
-from .models import AppUser, Recipe, Grocery
+from .models import AppUser, Recipe, Ingredient
 
 class AppUserCreationForm(UserCreationForm):
     class Meta:
@@ -8,11 +8,10 @@ class AppUserCreationForm(UserCreationForm):
         fields = ('username', 'password1', 'password2')
 
 class RecipeForm(forms.ModelForm):
-    # ingredients → ManyToManyField to Grocery table
+    # ingredients → ManyToManyField to Ingredient table
     # shown as checkboxes in the template
-    # queryset is set dynamically in the view based on logged-in user
     ingredients = forms.ModelMultipleChoiceField(
-        queryset=Grocery.objects.none(),  # overridden in view
+        queryset=Ingredient.objects.all(),
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )

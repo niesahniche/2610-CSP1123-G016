@@ -9,63 +9,112 @@ from django.contrib.auth.decorators import login_required
 from .forms import AppUserCreationForm, RecipeForm
 import json
 
-from .models import Grocery, AppUser, Recipe, FavouriteRecipe
+from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe
 
 
 # ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
     return render(request, "pages/home.html")
 
-
 # ── About ─────────────────────────────────────────────────────────────────────
 def about(request):
     return render(request, "pages/about.html")
-
-
-# ── Check recipe ──────────────────────────────────────────────────────────────
-def check_recipe(request, recipe_id):
-    user   = request.user if request.user.is_authenticated else AppUser.objects.first()
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-
-    # recipe_ingredients → Grocery items linked to this recipe via ManyToMany
-    recipe_ingredients = recipe.ingredients.all()
-
-    # my_groceries → Grocery items owned by this user
-    my_available = Grocery.objects.filter(user=user, status='available')
-
-    # available → recipe ingredients the user already has in their grocery list
-    available = recipe_ingredients.filter(id__in=my_available.values_list('id', flat=True))
-    
-    # missing → recipe ingredients NOT in user's grocery list
-    missing = recipe_ingredients.exclude(id__in=my_available.values_list('id', flat=True))
-
-    return render(request, 'pages/check.html', {
-        'recipe':  recipe,
-        'missing': missing,
-        'available': available,
-        'recipes': Recipe.objects.all(),
-    })
-
 
 # ── Grocery ───────────────────────────────────────────────────────────────────
 def grocery(request):
     user = request.user if request.user.is_authenticated else AppUser.objects.first()
 
     if request.method == "POST":
-        # name comes from the text input in grocery.html
-        name = request.POST.get('name', '').strip()
-        custom_name = request.POST.get('custom_name', '').strip()
-        if name:
-            Grocery.objects.create(user=user, name=name, custom_name=custom_name or None, status='available')
+        action = request.POST.get('action', '')
+        
+        # Add from existing ingredients dropdown
+        if action == 'add_from_dropdown':
+            ingredient_id = request.POST.get('ingredient_id', '').strip()
+            custom_name = request.POST.get('custom_name', '').strip()
+            quantity = request.POST.get('quantity', '').strip() or '1'
+            
+            if ingredient_id:
+                try:
+                    ingredient = Ingredient.objects.get(id=ingredient_id)
+                    existing = Grocery.objects.filter(
+                        user=user,
+                        name=ingredient.name,
+                        status='available'
+                    ).first()
+                    
+                    if existing:
+                        existing.quantity = quantity
+                        existing.save(update_fields=['quantity'])
+                        messages.success(request, f'{ingredient.name} quantity updated to {quantity}.')
+                    else:
+                        Grocery.objects.create(
+                            user=user,
+                            name=ingredient.name,
+                            custom_name=custom_name or None,
+                            quantity=quantity,
+                            status='available'
+                        )
+                        messages.success(request, f'Added {ingredient.name} to your grocery list!')
+                except Ingredient.DoesNotExist:
+                    messages.error(request, 'Ingredient not found.')
+        
+        # Add new ingredients (comma-separated)
+        elif action == 'add_new_ingredients':
+            new_ingredients_str = request.POST.get('new_ingredients', '').strip()
+            
+            if new_ingredients_str:
+                ingredient_names = [name.strip() for name in new_ingredients_str.split(',') if name.strip()]
+                added_count = 0
+                
+                for name in ingredient_names:
+                    # Create Ingredient if it doesn't exist
+                    ingredient, created = Ingredient.objects.get_or_create(name=name)
+                    
+                    # Check if already exists for user
+                    existing = Grocery.objects.filter(
+                        user=user,
+                        name=name,
+                        status='available'
+                    ).exists()
+                    
+                    if not existing:
+                        Grocery.objects.create(
+                            user=user,
+                            name=name,
+                            status='available',
+                            quantity='1'
+                        )
+                        added_count += 1
+                
+                if added_count > 0:
+                    messages.success(request, f'Added {added_count} ingredient(s) to your grocery list!')
+                else:
+                    messages.info(request, 'These ingredients were already in your grocery list.')
+        
         return redirect('grocery')
 
-    # groceries → all Grocery rows belonging to this user
+    # Get all available ingredients for dropdown
+    all_ingredients = Ingredient.objects.all().order_by('name')
+    
+    # Get user's grocery items
     available = Grocery.objects.filter(user=user, status='available')
     missing = Grocery.objects.filter(user=user, status='missing')
+    purchased = Grocery.objects.filter(user=user, status='purchased')
+    
     return render(request, 'pages/grocery.html', {
+        'all_ingredients': all_ingredients,
         'available': available,
         'missing': missing,
+        'purchased': purchased,
+        'missing_count': missing.count() + purchased.count(),
     })
+
+
+def purchase_item(request, id):
+    grocery_item = get_object_or_404(Grocery, id=id)
+    grocery_item.status = 'purchased'
+    grocery_item.save(update_fields=['status'])
+    return redirect('grocery')
 
 
 def remove_item(request, id):
@@ -127,60 +176,67 @@ def recipe_detail(request, id):
         request.user.is_authenticated and
         FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
     )
+
     return render(request, 'pages/recipe_detail.html', {
-        'recipe':   recipe,
-        'is_saved': is_fav,
+        'recipe':              recipe,
+        'is_saved':            is_fav,
     })
 
 # ── Add recipe ────────────────────────────────────────────────────────────────
 @login_required
 def add_recipe(request):
     user = request.user
+    custom_ingredients_value = ''
 
     if request.method == 'POST':
         form = RecipeForm(request.POST)
+        custom_ingredients_value = request.POST.get('custom_ingredients', '')
 
-        # set the ingredients queryset to this user's groceries
-        form.fields['ingredients'].queryset = Grocery.objects.filter(user=user, status='available')
-
-        #custom ingredients coding here sammm hehe!
+        # set the ingredients queryset to all available ingredients
+        form.fields['ingredients'].queryset = Ingredient.objects.all()
 
         if form.is_valid():
             # create the Recipe row but don't save to DB yet (commit=False)
-            # so we can set the user FK first
             recipe = form.save(commit=False)
-            recipe.user = user  # FK → AppUser who created this recipe
+            recipe.user = user
             recipe.save()
 
-            # save ManyToMany (ingredients) — must be done AFTER recipe.save()
+            # save ManyToMany (ingredients)
             form.save_m2m()
 
-            #another custom ingredients logic
+            # Handle new ingredients (comma-separated input)
+            new_ingredients_str = request.POST.get('new_ingredients', '').strip()
+            if new_ingredients_str:
+                ingredient_names = [name.strip() for name in new_ingredients_str.split(',') if name.strip()]
+                
+                for name in ingredient_names:
+                    # Create Ingredient if it doesn't exist
+                    ingredient, created = Ingredient.objects.get_or_create(name=name)
+                    
+                    # Add to recipe's ingredients
+                    recipe.ingredients.add(ingredient)
 
             messages.success(request, f'"{recipe.name}" has been added!')
-
-            # redirect to the new recipe's detail page
             return redirect('recipe_detail', id=recipe.id)
         else:
             messages.error(request, 'Please fix the errors below.')
 
     else:
         form = RecipeForm()
-        form.fields['ingredients'].queryset = Grocery.objects.filter(user=user, status='available')
+        form.fields['ingredients'].queryset = Ingredient.objects.all()
 
-    # groceries → passed to template for the checkbox list
-    groceries = Grocery.objects.filter(user=user, status='available')
+    # Pass all ingredients to template
+    all_ingredients = Ingredient.objects.all().order_by('name')
 
     return render(request, 'pages/add_recipe.html', {
-        'form':      form,
-        'groceries': groceries,
+        'form': form,
+        'all_ingredients': all_ingredients,
     })
 
 # ── To Make API ───────────────────────────────────────────────────────────────
-# Called when user clicks "To Make" on a saved recipe card.
-# Checks which recipe ingredients the user already has (status='available')
+# Called when user clicks "To Make" on a recipe card.
+# Checks which recipe ingredients the user already has (available in grocery)
 # vs which are missing, then auto-adds missing ones to the Grocery table
-# with status='missing' and a note linking back to the recipe name.
 @csrf_exempt
 @require_http_methods(['POST'])
 def to_make(request, recipe_id):
@@ -189,12 +245,17 @@ def to_make(request, recipe_id):
  
     recipe_ingredients = recipe.ingredients.all()
  
+    # Get ingredient names user has available in their grocery list
+    my_available_names = set(
+        Grocery.objects.filter(user=user, status='available')
+        .values_list('name', flat=True)
+    )
+    
     # available → recipe ingredients the user already has in their grocery list
-    my_available = Grocery.objects.filter(user=user, status='available')
-    available    = recipe_ingredients.filter(id__in=my_available.values_list('id', flat=True))
+    available = recipe_ingredients.filter(name__in=my_available_names)
  
     # missing → recipe ingredients NOT in user's available grocery list
-    missing = recipe_ingredients.exclude(id__in=my_available.values_list('id', flat=True))
+    missing = recipe_ingredients.exclude(name__in=my_available_names)
  
     # auto-add missing ingredients to Grocery table with status='missing'
     # skip if already added as missing for this recipe to avoid duplicates
@@ -211,7 +272,7 @@ def to_make(request, recipe_id):
                 user=user,
                 name=ing.name,
                 status='missing',
-                for_recipe=recipe.name,  # note links missing item to recipe
+                for_recipe=recipe.name,
             )
             added.append(ing.name)
  
@@ -288,12 +349,15 @@ def check_ingredients(request, recipe_id):
     user   = request.user if request.user.is_authenticated else AppUser.objects.first()
  
     recipe_ingredients = recipe.ingredients.all()
-    my_available = Grocery.objects.filter(user=user, status='available')
+    
+    # Get ingredient names user has available in their grocery list
+    my_available_names = set(
+        Grocery.objects.filter(user=user, status='available')
+        .values_list('name', flat=True)
+    )
  
-    available = [g.name for g in recipe_ingredients
-                 if my_available.filter(id=g.id).exists()]
-    missing   = [g.name for g in recipe_ingredients
-                 if not my_available.filter(id=g.id).exists()]
+    available = [ing.name for ing in recipe_ingredients if ing.name in my_available_names]
+    missing   = [ing.name for ing in recipe_ingredients if ing.name not in my_available_names]
  
     return JsonResponse({
         'recipe':    recipe.name,
@@ -314,16 +378,19 @@ def add_ingredients_to_grocery(request, recipe_id):
     user   = request.user if request.user.is_authenticated else AppUser.objects.first()
  
     recipe_ingredients = recipe.ingredients.all()
-    my_available = Grocery.objects.filter(user=user, status='available')
+    
+    # Get ingredient names user has available in their grocery list
+    my_available_names = set(
+        Grocery.objects.filter(user=user, status='available')
+        .values_list('name', flat=True)
+    )
+    
     added_available = []
     added_missing   = []
  
     for ing in recipe_ingredients:
-        has_it = my_available.filter(id=ing.id).exists()
- 
-        if has_it:
-            # user already has this — mark as available (it's already there,
-            # but we confirm it's linked to this recipe for reference)
+        if ing.name in my_available_names:
+            # user already has this
             added_available.append(ing.name)
         else:
             # user doesn't have this — add as missing with recipe note
@@ -376,7 +443,6 @@ def logout_view(request):
 @login_required
 def profile(request):
     favourites = FavouriteRecipe.objects.select_related('recipe').filter(user=request.user)
-    print("FAVOURITES",  list(favourites))  # Debug print to check the queryset contents
     return render(request, 'pages/user_profile.html', {
         'user':              request.user,
         'favourites': favourites,

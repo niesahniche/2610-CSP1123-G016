@@ -118,49 +118,34 @@
         </div>
 
         <!-- INGREDIENTS ─────────────────────────────────────────────────────
-             maps to Recipe.ingredients (ManyToManyField → Grocery table)
-             shows all Grocery items belonging to the logged-in user
-             user selects which ones are needed for this recipe             -->
+             maps to Recipe.ingredients (ManyToManyField → Ingredient table)
+             user selects from existing ingredients via Select2 dropdown
+             or adds new ones via comma-separated input                     -->
         <div class="form_group">
-            <label>Ingredients</label>
-            {% if groceries %}
-                <p class="form_hint">Select ingredients from your grocery list</p>
-                <div class="ingredient_checkboxes">
-                    {% for grocery in groceries %}
-                        <label class="checkbox_label">
-                            <!-- value = grocery.id (PK of Grocery table)
-                                 checked if it was previously selected      -->
-                            <input
-                                type="checkbox"
-                                name="ingredients"
-                                value="{{ grocery.id }}"
-                            />
-                            {{ grocery.name }}{% if grocery.custom_name %} ({{ grocery.custom_name }}){% endif %}
-                        </label>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <!-- no groceries yet — prompt user to add some first -->
-                <p class="form_hint">
-                    You have no grocery items yet.
-                    <a href="{% url 'grocery' %}">Add ingredients to your grocery list first →</a>
-                </p>
-            {% endif %}
+            <label for="id_ingredients">Select Ingredients</label>
+            <select id="id_ingredients" name="ingredients" multiple class="ingredients_select_recipe">
+                {% for ingredient in form.ingredients.field.queryset %}
+                    <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+                {% endfor %}
+            </select>
+            <div id="selected_ingredients" class="selected_ingredients"></div>
         </div>
-        <!-- CUSTOM INGREDIENTS — type new ones not yet in grocery list -->
-        <div class="form_group">
-            <label for="custom_ingredients">Add new ingredients</label>
+
+        <!-- NEW INGREDIENTS — Add ingredients not yet in the system -->
+        <div class="form_group new_ingredients_form">
+            <label for="new_ingredients">Add New Ingredients</label>
             <p class="form_hint">
-                Type ingredients not in your list — separate with commas.
-                They'll be added to your grocery list and linked to this recipe.
+                Type ingredients to add to the system — separate with commas.
+                They'll be saved and added to this recipe.
             </p>
             <input
                 type="text"
-                id="custom_ingredients"
-                name="custom_ingredients"
+                id="new_ingredients"
+                name="new_ingredients"
                 placeholder="e.g. Garlic, Olive Oil, Chilli flakes"
+                class="form_input_full"
             />
-            <div id="custom_preview" class="custom_preview"></div>
+            <div id="new_ingredients_preview" class="ingredients_tags"></div>
         </div>
         <div class="form_actions">
             <a href="{% url 'recipe_list' %}" class="btn_cancel">Cancel</a>
@@ -308,28 +293,167 @@
 
     .btn_cancel:hover { border-color: #b85c38; color: #b85c38; }
 
-    .custom_preview { 
-        display: flex; flex-wrap: wrap; 
-        gap: 0.4rem; margin-top: 0.5rem; 
+    .ingredients_select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #ccc;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+        background: #fff;
     }
 
-    .custom_tag { 
-        background: #f0faf4; 
-        color: #2d6a4f; 
-        border: 1px solid #6ac383; 
-        border-radius: 20px; 
-        padding: 0.2rem 0.7rem; 
+    .ingredients_select:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .ingredients_select_recipe {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #ccc;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+        background: #fff;
+    }
+
+    .ingredients_select_recipe:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .new_ingredients_form {
+        background: linear-gradient(135deg, #fff 0%, #faf6f0 100%);
+        border: 1.5px solid #e0d5c1;
+        border-radius: 10px;
+        padding: 1.2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .form_input_full {
+        width: 100%;
+        padding: 0.6rem 0.9rem;
+        border: 1.5px solid #ccc;
+        border-radius: 7px;
+        font-size: 0.9rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        margin-bottom: 0.6rem;
+        transition: border-color 0.2s;
+    }
+
+    .form_input_full:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .ingredients_tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .ingredient_tag {
+        background: linear-gradient(135deg, #f0faf4 0%, #e8f5f0 100%);
+        color: #2d6a4f;
+        border: 1.5px solid #6ac383;
+        border-radius: 20px;
+        padding: 0.35rem 0.9rem;
         font-size: 0.8rem;
-        font-weight: 600; 
+        font-weight: 600;
+        box-shadow: 0 1px 4px rgba(106, 195, 131, 0.15);
     }
 
+    /* Select2 custom styling */
+    .select2-container--default .select2-selection--multiple {
+        border: 1.5px solid #ccc !important;
+        border-radius: 8px !important;
+        background: #fff !important;
+        min-height: 45px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+        border-color: #6ac383 !important;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15) !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #f0faf4 !important;
+        border: 1px solid #6ac383 !important;
+        color: #2d6a4f !important;
+        border-radius: 5px !important;
+        padding: 3px 8px !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #6ac383 !important;
+        margin-right: 4px !important;
+        font-weight: bold !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        color: #2d6a4f !important;
+    }
+    .select2-dropdown {
+        border: 1.5px solid #6ac383 !important;
+        border-radius: 8px !important;
+    }
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        border: 1.5px solid #ccc !important;
+        border-radius: 4px !important;
+        padding: 8px 12px !important;
+    }
+    .select2-results__option--highlighted {
+        background-color: #96D4AA !important;
+        color: #fff !important;
+    }
+    .select2-results__option {
+        padding: 10px 12px !important;
+        font-size: 0.95rem !important;
+    }
 </style>
 
 <script>
-    document.getElementById('custom_ingredients').addEventListener('input', function () {
-        const preview = document.getElementById('custom_preview');
-        const names   = this.value.split(',').map(s => s.trim()).filter(Boolean);
-        preview.innerHTML = names.map(n => `<span class="custom_tag">+ ${n}</span>`).join('');
+    // Initialize Select2 for recipe ingredients
+    document.addEventListener('DOMContentLoaded', function() {
+        $('#id_ingredients').select2({
+            placeholder: '-- Click to search and select ingredients --',
+            allowClear: true,
+            width: '100%',
+            containerCssClass: 'select2-container-custom',
+            dropdownCssClass: 'select2-dropdown-custom',
+            closeOnSelect: false
+        });
+
+        // Display selected ingredients as tags
+        $('#id_ingredients').on('change', function() {
+            const selectedContainer = document.getElementById('selected_ingredients');
+            const selectedOptions = $(this).find('option:selected');
+            
+            selectedContainer.innerHTML = selectedOptions
+                .map((_, opt) => `<span class="ingredient_tag">${$(opt).text()}</span>`)
+                .get()
+                .join('');
+        });
+
+        // Trigger initial display of selected ingredients
+        $('#id_ingredients').trigger('change');
+    });
+
+    // Handle new ingredients comma-separated input
+    document.getElementById('new_ingredients').addEventListener('input', function () {
+        const previewContainer = document.getElementById('new_ingredients_preview');
+        const names = this.value.split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+        
+        previewContainer.innerHTML = names
+            .map(name => `<span class="ingredient_tag new">${name}</span>`)
+            .join('');
     });
 </script>
 

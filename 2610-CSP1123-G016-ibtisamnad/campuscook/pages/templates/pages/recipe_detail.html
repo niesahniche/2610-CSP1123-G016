@@ -111,7 +111,7 @@
                              → calls add_ingredients API
                              → adds available (confirmed) + missing to grocery
                              → shows final confirmation                      -->
-                {% if user.is_authenticated and recipe.ingredients.count > 0 %}
+            {% if user.is_authenticated and recipe.ingredients.count > 0 %}
                 <button
                     class="btn_check_ingredients"
                     data-recipe-id="{{ recipe.id }}"
@@ -119,8 +119,7 @@
                 >
                     🛒 Check my ingredients
                 </button>
-                {% endif %}
-            </section>
+            {% endif %}
 
             <!-- INSTRUCTIONS SECTION ────────────────────────────────────────
                  recipe.instructions → TextField from Recipe table            -->
@@ -176,6 +175,10 @@
     .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
     .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
     .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
+    .missing_summary { margin-top: 1rem; padding: 1rem; border: 1px solid #f5ddd4; border-radius: 10px; background: #fff8f5; }
+    .missing_label { font-size: 0.9rem; font-weight: 700; color: #b85c38; margin-bottom: 0.6rem; }
+    .missing_list { list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+    .missing_list li { padding: 0.35rem 0.65rem; border-radius: 6px; background: #fff3ee; color: #b85c38; }
     .popup-btn { display: block; width: 100%; padding: 0.75rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s; }
     .popup-btn:hover { background: #6ac383; }
     .popup-btn.secondary { background: #fff; color: #555; border: 1.5px solid #ddd; margin-top: 0.4rem; }

@@ -1,8 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager
 
-#removed ingredient, custom_ingredient, and recipe_ingredient tables — replaced with Grocery and ManyToMany in Recipe
-
 class AppUser(AbstractUser):
     # AbstractUser provides: username, password, email, first_name, last_name
     age = models.IntegerField(null=True, blank=True)
@@ -17,18 +15,25 @@ class RecipeFilter(models.Model):
  
     def __str__(self):
         return self.name
+
+
+class Ingredient(models.Model):
+    """Global ingredient list shared by all users and recipes"""
+    name = models.CharField(max_length=100, unique=True)
+ 
+    def __str__(self):
+        return self.name
  
  
 class Grocery(models.Model):
     STATUS_CHOICES = [
         ('available', 'Available'),   # user has this ingredient
         ('missing',   'Missing'),     # added automatically when using "To Make"
+        ('purchased', 'Purchased'),   # marked as purchased after clicking Got it
     ]
  
     name        = models.CharField(max_length=100, default='')
     custom_name = models.CharField(max_length=100, null=True, blank=True)
- 
-    # status → 'available' by default when user manually adds
     #          'missing'   when auto-added via "To Make" button
     status      = models.CharField(
         max_length=20,
@@ -41,6 +46,9 @@ class Grocery(models.Model):
     # null/blank because available groceries don't need this
     for_recipe  = models.CharField(max_length=200, null=True, blank=True)
  
+    # quantity → optional quantity of the ingredient (e.g. "2 cups", "3 tsp")
+    quantity    = models.CharField(max_length=100, null=True, blank=True)
+ 
     user        = models.ForeignKey(
         'pages.AppUser',
         on_delete=models.CASCADE,
@@ -48,14 +56,15 @@ class Grocery(models.Model):
     )
  
     def __str__(self):
-        return f"{self.name} ({self.status})"
+        quantity_label = f"{self.quantity}x " if self.quantity and self.quantity != 1 else ""
+        return f"{quantity_label}{self.name} ({self.status})"
  
  
 class Recipe(models.Model):
     name         = models.CharField(max_length=100)
-    # ingredients → ManyToMany to Grocery table (grocery_id is the FK)
+    # ingredients → ManyToMany to Ingredient table (separate from Grocery)
     ingredients  = models.ManyToManyField(
-        Grocery,
+        Ingredient,
         blank=True,
         related_name='recipes'
     )

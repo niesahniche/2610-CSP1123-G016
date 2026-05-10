@@ -9,10 +9,8 @@ urlpatterns = [
 
     # ── Grocery ───────────────────────────────────────────────────────────────
     path("grocery/",          views.grocery,     name="grocery"),
+    path("grocery/purchased/<int:id>/", views.purchase_item, name="purchase_item"),
     path("remove/<int:id>/",  views.remove_item, name="remove_item"),
-
-    # ── Check recipe ──────────────────────────────────────────────────────────
-    path("check/<int:recipe_id>/", views.check_recipe, name="check_recipe"),
 
     # ── Recipe pages ──────────────────────────────────────────────────────────
     path("recipes/",                 views.recipe_list,   name="recipe_list"),

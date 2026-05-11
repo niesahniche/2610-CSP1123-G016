@@ -11,6 +11,10 @@ urlpatterns = [
     path("grocery/",          views.grocery,     name="grocery"),
     path("grocery/purchased/<int:id>/", views.purchase_item, name="purchase_item"),
     path("remove/<int:id>/",  views.remove_item, name="remove_item"),
+    
+    # Ingredient search API — for autocomplete in grocery and add_recipe
+    path("api/ingredients/", views.ingredient_search, name="ingredient_search"),
+    path("api/to-make/<int:recipe_id>/", views.to_make, name="to_make"),
 
     # ── Recipe pages ──────────────────────────────────────────────────────────
     path("recipes/",                 views.recipe_list,   name="recipe_list"),
@@ -33,6 +37,14 @@ urlpatterns = [
     # ── Ingredient check/add APIs ─────────────────────────────────────────────
     path("api/check-ingredients/<int:recipe_id>/",      views.check_ingredients,        name="check_ingredients"),
     path("api/add-ingredients/<int:recipe_id>/",        views.add_ingredients_to_grocery, name="add_ingredients_to_grocery"),
+
+    # ── Comments API ──────────────────────────────────────────────────────────
+    path("api/comments/<int:recipe_id>/",      views.get_comments,  name="get_comments"),
+    path("api/add-comment/<int:recipe_id>/",   views.add_comment,   name="add_comment"),
+
+    # ── Ratings API ───────────────────────────────────────────────────────────
+    path("api/rate/<int:recipe_id>/",          views.rate_recipe,         name="rate_recipe"),
+    path("api/ratings/<int:recipe_id>/",       views.get_recipe_ratings,  name="get_recipe_ratings"),
 
     # ── Auth ──────────────────────────────────────────────────────────────────
     path("signup/", views.signup_view, name="signup"),

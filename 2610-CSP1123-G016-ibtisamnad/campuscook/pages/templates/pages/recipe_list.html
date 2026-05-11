@@ -51,17 +51,30 @@
          recipe.name → name field in Recipe table                        -->
     <section class="recipe_cards">
 
-        {% for recipe in recipes %}
+        {% for item in recipes %}
             <article class="card">
 
                 <!-- recipe.name → name field from Recipe table -->
-                <h2>{{ recipe.name }}</h2>
+                <h2>{{ item.recipe.name }}</h2>
+
+                <!-- Creator and Rating Info -->
+                <div class="recipe_meta">
+                    <span class="recipe_creator">👨‍🍳 by {{ item.creator }}</span>
+                    <span class="recipe_rating">
+                        ⭐ {{ item.avg_rating }}
+                        {% if item.total_ratings > 0 %}
+                            <span class="rating_count">({{ item.total_ratings }})</span>
+                        {% else %}
+                            <span class="rating_count">(No ratings)</span>
+                        {% endif %}
+                    </span>
+                </div>
 
                 <div class="card_image_wrap">
                     <!-- links to recipe detail page using recipe.id as PK -->
-                    <a href="{% url 'recipe_detail' recipe.id %}">
-                        {% if recipe.image_url %}
-                            <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" class="card_image">
+                    <a href="{% url 'recipe_detail' item.recipe.id %}">
+                        {% if item.recipe.image_url %}
+                            <img src="{{ item.recipe.image_url }}" alt="{{ item.recipe.name }}" class="card_image">
                         {% else %}
                             <div class="card_image_placeholder"></div>
                         {% endif %}
@@ -81,24 +94,24 @@
                      Django stores: FavouriteRecipe(recipe_id=recipe.id, user=user) -->
                 <div class="card_actions">
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
+                    <button class="btn_action btn_tomake" data-recipe-id="{{ item.recipe.id }}" data-recipe-name="{{ item.recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
                     {% endif %}
 
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_fav {% if recipe.id in fav_ids %}btn_fav_active{% endif %}"
-                    data-recipe-id="{{ recipe.id }}" 
-                    data-fav="{% if recipe.id in fav_ids %}true{% else %}false{% endif %}"
+                    <button class="btn_action btn_fav {% if item.recipe.id in fav_ids %}btn_fav_active{% endif %}"
+                    data-recipe-id="{{ item.recipe.id }}" 
+                    data-fav="{% if item.recipe.id in fav_ids %}true{% else %}false{% endif %}"
                     onclick="toggleFav(this)"
-                    title="{% if recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
+                    title="{% if item.recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
                     >
-                    {% if recipe.id in fav_ids %}♥ Favourited{% else %}♡ Favourite{% endif %}
+                    {% if item.recipe.id in fav_ids %}♥ Favourited{% else %}♡ Favourite{% endif %}
                     </button>
                     {% endif %}
 
-                    <button class="btn_action btn_share" data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' recipe.id %}" onclick="shareRecipe(this)">🔗 Share</button>
+                    <button class="btn_action btn_share" data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' item.recipe.id %}" onclick="shareRecipe(this)">🔗 Share</button>
                 </div>
 
-                <a href="{% url 'recipe_detail' recipe.id %}" class="recipe_link">
+                <a href="{% url 'recipe_detail' item.recipe.id %}" class="recipe_link">
                     View Recipe →
                 </a>
 
@@ -110,15 +123,15 @@
     </section>
 
     <!-- PAGINATION ───────────────────────────────────────────────────────
-         recipes is a Page object from Paginator in views.py (6 per page) -->
-    {% if recipes.has_other_pages %}
+         page is a Page object from Paginator in views.py (6 per page) -->
+    {% if page.has_other_pages %}
         <div class="pagination">
-            {% if recipes.has_previous %}
-                <a href="?page={{ recipes.previous_page_number }}">← Prev</a>
+            {% if page.has_previous %}
+                <a href="?page={{ page.previous_page_number }}">← Prev</a>
             {% endif %}
-            <span>Page {{ recipes.number }} of {{ recipes.paginator.num_pages }}</span>
-            {% if recipes.has_next %}
-                <a href="?page={{ recipes.next_page_number }}">Next →</a>
+            <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}
+                <a href="?page={{ page.next_page_number }}">Next →</a>
             {% endif %}
         </div>
     {% endif %}
@@ -169,6 +182,10 @@
   .toast.show { opacity: 1; transform: none; }
   .toast.success { background: #2d6a4f; }
   .toast.error   { background: #b85c38; }
+  .recipe_meta { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0.5rem 0 0.8rem; font-size: 0.85rem; flex-wrap: wrap; }
+  .recipe_creator { color: #666; font-weight: 500; }
+  .recipe_rating { font-weight: 700; color: #8a5a00; }
+  .rating_count { color: #999; font-weight: normal; font-size: 0.8rem; }
 </style>
 
 <!-- Favourite RECIPE SCRIPT ───────────────────────────────────────────────────────

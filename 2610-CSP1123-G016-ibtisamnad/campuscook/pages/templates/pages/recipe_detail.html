@@ -68,29 +68,30 @@
                     🔧 {{ recipe.appliance }}
                 </span>
 
-                <span class="recipe_budget">💰 {{ recipe.get_budget_display }}</span>
+                <span class="recipe_budget">
+                    💰 {{ recipe.get_budget_display }}
+                </span>
+                
                 {% if recipe.is_halal %}
                     <span class="recipe_halal">✅ Halal</span>
                 {% else %}
                     <span class="recipe_nonhalal">❌ Non-Halal</span>
                 {% endif %}
 
-                <!-- ── uncomment when added to models.py ──────────────────
-                <a href="{% url 'recipe_filter' %}?category={{ recipe.category }}"
-                    class="recipe_category tag_link">
-                    📂 {{ recipe.get_category_display }}
-                </a>
-                <a href="{% url 'recipe_filter' %}?budget={{ recipe.budget }}"
-                    class="recipe_budget tag_link">
-                    💰 {{ recipe.get_budget_display }}
-                </a>
-                {% if recipe.is_halal %}
-                    <a href="{% url 'recipe_filter' %}?halal=true" class="recipe_halal tag_link">✅ Halal</a>
-                {% else %}
-                    <a href="{% url 'recipe_filter' %}?halal=false" class="recipe_nonhalal tag_link">❌ Non-Halal</a>
-                {% endif %}
-                ─────────────────────────────────────────────────────────── -->
-
+            <!-- RECIPE CREATOR & RATING ────────────────────────────────────
+                 recipe.user.username → creator name
+                 avg_rating → calculated average from all ratings
+                 total_ratings → count of ratings                            -->
+            <div class="detail_meta">
+                <span class="meta_creator">👨‍🍳 Recipe by <strong>{{ recipe.user.username }}</strong></span>
+                <span class="meta_rating">
+                    ⭐ {{ avg_rating }}
+                    {% if total_ratings > 0 %}
+                        <span class="rating_count">({{ total_ratings }} rating{{ total_ratings|pluralize }})</span>
+                    {% else %}
+                        <span class="rating_count">(No ratings yet)</span>
+                    {% endif %}
+                </span>
             </div>
 
             <!-- INGREDIENTS SECTION ─────────────────────────────────────────
@@ -133,6 +134,79 @@
             <section class="detail_section">
                 <h2 class="section_title">Instructions 👩‍🍳</h2>
                 <p class="detail_instructions">{{ recipe.instructions }}</p>
+            </section>
+
+            <!-- RATING SECTION ──────────────────────────────────────────────
+                 Shows star rating widget. Logged-in users can rate the recipe
+                 user_rating → user's existing rating (if any)               -->
+            {% if user.is_authenticated %}
+            <section class="detail_section">
+                <h2 class="section_title">Leave a Rating ⭐</h2>
+                <div class="rating_widget">
+                    <div class="stars_container">
+                        {% for i in rating_choices %}
+                            <button 
+                                class="star_btn {% if user_rating and user_rating.stars >= i %}active{% endif %}"
+                                data-stars="{{ i }}"
+                                onclick="rateRecipe(this, {{ recipe.id }})"
+                                title="Rate {{ i }} star{{ i|pluralize }}"
+                            >★</button>
+                        {% endfor %}
+                    </div>
+                    {% if user_rating %}
+                        <span class="current_rating">Your rating: {{ user_rating.stars }} ⭐</span>
+                    {% else %}
+                        <span class="current_rating">Not rated yet</span>
+                    {% endif %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- COMMENTS SECTION ────────────────────────────────────────────
+                 Shows all comments on the recipe
+                 Logged-in users can add new comments                         -->
+            <section class="detail_section">
+                <h2 class="section_title">Comments 💬</h2>
+                
+                <!-- COMMENT FORM ─ only for logged-in users ─────────────────-->
+                {% if user.is_authenticated %}
+                <div class="comment_form_wrap">
+                    <form class="comment_form" onsubmit="submitComment(event, {{ recipe.id }})">
+                        {% csrf_token %}
+                        <textarea 
+                            id="commentInput"
+                            class="comment_input" 
+                            placeholder="Share your thoughts about this recipe..."
+                            rows="3"
+                            required
+                        ></textarea>
+                        <button type="submit" class="comment_submit">Post Comment</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="comment_login_prompt">
+                    <p>🔒 <a href="{% url 'login' %}">Log in</a> to leave a comment</p>
+                </div>
+                {% endif %}
+
+                <!-- COMMENTS LIST ───────────────────────────────────────────-->
+                <div class="comments_list" id="commentsList">
+                    {% if comments %}
+                        {% for comment in comments %}
+                            <div class="comment_item">
+                                <div class="comment_header">
+                                    <strong class="comment_author">{{ comment.user.username }}</strong>
+                                    <span class="comment_date">{{ comment.created_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                                <p class="comment_text">{{ comment.commentary }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no_comments">
+                            <p>No comments yet. Be the first to share your thoughts!</p>
+                        </div>
+                    {% endif %}
+                </div>
             </section>
 
             <!-- BOTTOM NAVIGATION ───────────────────────────────────────────-->
@@ -194,6 +268,32 @@
     .toast.show { opacity: 1; transform: none; }
     .toast.success { background: #2d6a4f; }
     .toast.error   { background: #b85c38; }
+    .detail_meta { display: flex; gap: 2rem; margin: 1rem 0; flex-wrap: wrap; font-size: 0.95rem; }
+    .meta_creator { color: #666; }
+    .meta_rating { font-weight: 700; color: #8a5a00; }
+    .rating_count { color: #999; font-weight: normal; font-size: 0.85rem; margin-left: 0.3rem; }
+    .rating_widget { background: #f9f9f9; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; }
+    .stars_container { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+    .star_btn { background: none; border: none; font-size: 2rem; cursor: pointer; color: #ddd; transition: color 0.2s; padding: 0; }
+    .star_btn:hover { color: #ffd700; }
+    .star_btn.active { color: #ffd700; }
+    .current_rating { display: block; font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
+    .comment_form_wrap { background: #f9f9f9; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; }
+    .comment_form { display: flex; flex-direction: column; gap: 0.8rem; }
+    .comment_input { padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; }
+    .comment_input:focus { outline: none; border-color: #96D4AA; background: #f0faf4; }
+    .comment_submit { padding: 0.7rem 1.5rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .comment_submit:hover { background: #6ac383; }
+    .comment_login_prompt { background: #f0faf4; padding: 1.5rem; border-radius: 10px; text-align: center; margin-bottom: 1.5rem; }
+    .comment_login_prompt a { color: #2d6a4f; font-weight: 600; text-decoration: none; }
+    .comment_login_prompt a:hover { text-decoration: underline; }
+    .comments_list { display: flex; flex-direction: column; gap: 1rem; }
+    .comment_item { background: #f9f9f9; padding: 1rem; border-radius: 8px; border-left: 4px solid #96D4AA; }
+    .comment_header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem; }
+    .comment_author { color: #2d6a4f; font-size: 0.95rem; }
+    .comment_date { font-size: 0.8rem; color: #999; }
+    .comment_text { color: #555; line-height: 1.6; margin: 0; word-wrap: break-word; }
+    .no_comments { text-align: center; padding: 2rem; color: #999; font-style: italic; }
 </style>
 
 <!-- FAVOURITE RECIPE SCRIPT ───────────────────────────────────────────────────────
@@ -365,6 +465,99 @@
         const t = document.getElementById('toast');
         t.textContent = msg; t.className = `toast show ${type}`;
         setTimeout(() => { t.className = 'toast'; }, 3000);
+    }
+
+    // ── Rate Recipe ───────────────────────────────────────────────────────────
+    async function rateRecipe(btn, recipeId) {
+        const stars = parseInt(btn.dataset.stars);
+        
+        try {
+            const res = await fetch(`/api/rate/${recipeId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ stars }),
+            });
+            if (!res.ok) throw new Error();
+            
+            const data = await res.json();
+            
+            // Update all star buttons
+            const allStars = document.querySelectorAll('.star_btn');
+            allStars.forEach(star => {
+                const starValue = parseInt(star.dataset.stars);
+                if (starValue <= stars) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+            
+            // Update rating display
+            const ratingDisplay = document.querySelector('.current_rating');
+            if (ratingDisplay) {
+                ratingDisplay.textContent = `Your rating: ${stars} ⭐`;
+            }
+            
+            showToast(`Rated ${stars} star${stars > 1 ? 's' : ''}! ⭐`, 'success');
+        } catch (e) {
+            showToast('Could not save rating. Try again.', 'error');
+        }
+    }
+
+    // ── Submit Comment ────────────────────────────────────────────────────────
+    async function submitComment(event, recipeId) {
+        event.preventDefault();
+        
+        const textarea = document.getElementById('commentInput');
+        const comment = textarea.value.trim();
+        
+        if (!comment) {
+            showToast('Comment cannot be empty', 'error');
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/add-comment/${recipeId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ comment }),
+            });
+            if (!res.ok) throw new Error();
+            
+            const data = await res.json();
+            
+            // Clear textarea
+            textarea.value = '';
+            
+            // Add comment to list
+            const commentsList = document.getElementById('commentsList');
+            const noComments = commentsList.querySelector('.no_comments');
+            
+            const newComment = `
+                <div class="comment_item">
+                    <div class="comment_header">
+                        <strong class="comment_author">${data.username}</strong>
+                        <span class="comment_date">${data.created_at}</span>
+                    </div>
+                    <p class="comment_text">${data.commentary}</p>
+                </div>
+            `;
+            
+            if (noComments) {
+                noComments.remove();
+            }
+            
+            commentsList.insertAdjacentHTML('afterbegin', newComment);
+            showToast('Comment posted! 💬', 'success');
+        } catch (e) {
+            showToast('Could not post comment. Try again.', 'error');
+        }
     }
 </script>
 

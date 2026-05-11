@@ -6,10 +6,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.db.models import Avg
 from .forms import AppUserCreationForm, RecipeForm
 import json
 
-from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Ingredient
+from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating
 
 
 # ── Home ──────────────────────────────────────────────────────────────────────
@@ -150,7 +151,7 @@ def recipe_list(request):
             ingredients__name__icontains=ingredient_search_q
         ).distinct()
     paginator = Paginator(recipes, 6)
-    recipes   = paginator.get_page(request.GET.get('page'))
+    recipes_page = paginator.get_page(request.GET.get('page'))
 
     if request.user.is_authenticated:
         fav_ids = set(
@@ -159,10 +160,24 @@ def recipe_list(request):
         )
     else:
         fav_ids = set()
+    
+    # Add rating and creator info to each recipe
+    recipes_with_info = []
+    for recipe in recipes_page:
+        avg_rating = recipe.ratings.all().aggregate(Avg('stars'))['stars__avg'] or 0
+        avg_rating = round(avg_rating, 1)
+        total_ratings = recipe.ratings.count()
+        recipes_with_info.append({
+            'recipe': recipe,
+            'avg_rating': avg_rating,
+            'total_ratings': total_ratings,
+            'creator': recipe.user.username,
+        })
  
     return render(request, 'pages/recipe_list.html', {
-        'recipes':   recipes,
-        'fav_ids': list(fav_ids),
+        'recipes':   recipes_with_info,
+        'page':      recipes_page,
+        'fav_ids':   list(fav_ids),
     })
 
 # ── Recipe filter ─────────────────────────────────────────────────────────────
@@ -207,10 +222,31 @@ def recipe_detail(request, id):
         request.user.is_authenticated and
         FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
     )
+    
+    # Get comments for this recipe
+    comments = Comment.objects.filter(recipe=recipe)
+    
+    # Get ratings for this recipe
+    ratings = recipe.ratings.all()
+    avg_rating = ratings.aggregate(Avg('stars'))['stars__avg'] or 0
+    avg_rating = round(avg_rating, 1)
+    total_ratings = ratings.count()
+    
+    # Check if current user has already rated
+    user_rating = None
+    if request.user.is_authenticated:
+        user_rating = Rating.objects.filter(user=request.user, recipe=recipe).first()
+
+    rating_choices = [1, 2, 3, 4, 5]
 
     return render(request, 'pages/recipe_detail.html', {
-        'recipe':              recipe,
-        'is_fav':            is_fav,
+        'recipe':          recipe,
+        'is_saved':        is_fav,
+        'comments':        comments,
+        'avg_rating':      avg_rating,
+        'total_ratings':   total_ratings,
+        'user_rating':     user_rating,
+        'rating_choices':  rating_choices,
     })
 
 # ── Add recipe ────────────────────────────────────────────────────────────────
@@ -479,4 +515,114 @@ def profile(request):
     return render(request, 'pages/user_profile.html', {
         'user':              request.user,
         'favourites': favourites,
+    })
+
+
+# ── Comments API ──────────────────────────────────────────────────────────────
+@csrf_exempt
+@require_http_methods(['POST'])
+def add_comment(request, recipe_id):
+    """Add a comment to a recipe"""
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    user = request.user if request.user.is_authenticated else AppUser.objects.first()
+    
+    try:
+        data = json.loads(request.body)
+        commentary = data.get('comment', '').strip()
+        
+        if not commentary:
+            return JsonResponse({'error': 'Comment cannot be empty'}, status=400)
+        
+        comment = Comment.objects.create(
+            user=user,
+            recipe=recipe,
+            commentary=commentary
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'comment_id': comment.id,
+            'username': user.username,
+            'commentary': commentary,
+            'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@require_http_methods(['GET'])
+def get_comments(request, recipe_id):
+    """Get all comments for a recipe"""
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    comments = Comment.objects.filter(recipe=recipe)
+    
+    data = [
+        {
+            'comment_id': c.id,
+            'username': c.user.username,
+            'commentary': c.commentary,
+            'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        }
+        for c in comments
+    ]
+    return JsonResponse(data, safe=False)
+
+
+# ── Rating API ────────────────────────────────────────────────────────────────
+@csrf_exempt
+@require_http_methods(['POST'])
+def rate_recipe(request, recipe_id):
+    """Add or update a rating for a recipe"""
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    user = request.user if request.user.is_authenticated else AppUser.objects.first()
+    
+    try:
+        data = json.loads(request.body)
+        stars = int(data.get('stars', 0))
+        
+        if stars < 1 or stars > 5:
+            return JsonResponse({'error': 'Stars must be between 1 and 5'}, status=400)
+        
+        # Create or update rating
+        rating, created = Rating.objects.update_or_create(
+            user=user,
+            recipe=recipe,
+            defaults={'stars': stars}
+        )
+        
+        # Calculate new average
+        avg_rating = recipe.ratings.all().aggregate(Avg('stars'))['stars__avg'] or 0
+        avg_rating = round(avg_rating, 1)
+        total_ratings = recipe.ratings.count()
+        
+        return JsonResponse({
+            'success': True,
+            'stars': stars,
+            'avg_rating': avg_rating,
+            'total_ratings': total_ratings,
+            'created': created,
+        }, status=201 if created else 200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@require_http_methods(['GET'])
+def get_recipe_ratings(request, recipe_id):
+    """Get rating stats for a recipe"""
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    ratings = recipe.ratings.all()
+    
+    avg_rating = ratings.aggregate(Avg('stars'))['stars__avg'] or 0
+    avg_rating = round(avg_rating, 1)
+    total_ratings = ratings.count()
+    
+    # Get distribution of ratings
+    distribution = {}
+    for i in range(1, 6):
+        distribution[i] = ratings.filter(stars=i).count()
+    
+    return JsonResponse({
+        'avg_rating': avg_rating,
+        'total_ratings': total_ratings,
+        'distribution': distribution,
     })

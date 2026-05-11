@@ -1,0 +1,237 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-header">
+    <h1>Welcome Back!</h1>
+    <p>Sign in to your account</p>
+  </div>
+
+  <!-- Django's built-in LoginView handles this POST
+       It checks username + password against AppUser table automatically -->
+  <form method="POST" action="{% url 'login' %}">
+    {% csrf_token %}
+
+    <!-- 'next' → redirects user to the page they were trying to reach before login -->
+    <input type="hidden" name="next" value="{{ next }}"/>
+
+    <!-- non-field errors e.g. "Please enter a correct username and password" -->
+    {% if form.non_field_errors %}
+      <div class="login-error">
+        {% for error in form.non_field_errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Django messages e.g. "You have been logged out" -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="toast-data" data-msg="{{ message }}" data-type="{{ message.tags }}" style="display:none;"></div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="form-group">
+      <label for="id_username">Username</label>
+      <input
+        type="text"
+        id="id_username"
+        name="username"
+        placeholder="Enter your username"
+        autocomplete="username"
+        value="{{ form.username.value|default:'' }}"
+      />
+      {% if form.username.errors %}
+        <div class="field-error">{{ form.username.errors.0 }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="id_password">Password</label>
+      <input
+        type="password"
+        id="id_password"
+        name="password"
+        placeholder="Enter your password"
+        autocomplete="current-password"
+      />
+      {% if form.password.errors %}
+        <div class="field-error">{{ form.password.errors.0 }}</div>
+      {% endif %}
+    </div>
+
+
+    <button type="submit" class="btn-submit">Sign In</button>
+  </form>
+
+  <p class="footer-link">
+    Don't have an account? <a href="{% url 'signup' %}">Create one</a>
+  </p>
+</div>
+
+<style>
+  .card {
+    background: #fff; border: 1px solid #2e2e42;
+    border-radius: 16px; padding: 2.5rem 2rem;
+    width: 100%; max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    margin: 2rem auto;
+  }
+  .card-header { text-align: center; margin-bottom: 2rem; }
+  .card-header h1 { font-size: 1.75rem; font-weight: 700; color: #000; }
+  .card-header p  { color: #099b10a9; margin-top: 0.4rem; font-size: 0.9rem; }
+
+  .form-group { margin-bottom: 1.2rem; }
+
+  label {
+    display: block; font-size: 0.8rem; font-weight: 600;
+    color: #025f1e; margin-bottom: 0.4rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  input[type="text"], input[type="password"] {
+    width: 100%; height: 40px; padding: 0 0.8rem;
+    border: 1.5px solid #555; border-radius: 4px;
+    font-size: 0.9rem; color: #111; background: #fff; outline: none;
+  }
+  input:focus { border-color: #7c5cbf; box-shadow: 0 0 0 3px rgba(124,92,191,0.15); }
+
+  .field-error { font-size: 0.72rem; color: #c0392b; margin-top: 0.3rem; }
+
+  .login-error {
+    background: #fdf0ee; color: #9b2226;
+    border: 1px solid #f0b4ae; border-radius: 6px;
+    padding: 0.5rem 0.8rem; font-size: 0.82rem; margin-bottom: 1rem;
+  }
+
+  .messages { margin-bottom: 1.2rem; }
+  .message { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 0.5rem; }
+  .message.success { background: #1a3a2a; color: #4caf82; border: 1px solid #2d5a3d; }
+  .message.error   { background: #3a1a1a; color: #ff6b6b; border: 1px solid #5a2d2d; }
+
+  .btn-submit {
+    width: 100%; padding: 0.875rem;
+    background: #94D4AA; color: #fff; border: none;
+    border-radius: 8px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin-top: 0.5rem;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-submit:hover  { background: #6AC383; }
+  .btn-submit:active { transform: scale(0.99); }
+
+  .footer-link { text-align: center; margin-top: 1rem; font-size: 0.82rem; color: #888; }
+  .footer-link a { color: #7c5cbf; font-weight: 600; text-decoration: none; }
+  .footer-link a:hover { text-decoration: underline; }
+
+  /* ── Toast notifications ─────────────────────────────────────────────── */
+  #toast-container {
+    position: fixed; top: 1.5rem; right: 1.5rem;
+    display: flex; flex-direction: column; gap: 0.6rem;
+    z-index: 9999; pointer-events: none;
+  }
+
+  .toast {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: 10px;
+    min-width: 280px; max-width: 360px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+    pointer-events: auto;
+    animation: toast-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    position: relative; overflow: hidden;
+  }
+  .toast.hide {
+    animation: toast-out 0.3s ease forwards;
+  }
+  .toast.success {
+    background: #f0faf4; border: 1px solid #6AC383;
+    color: #1a5c2e;
+  }
+  .toast.error {
+    background: #fff2f2; border: 1px solid #ff8a8a;
+    color: #8b1a1a;
+  }
+
+  .toast-icon {
+    font-size: 1.15rem; line-height: 1; flex-shrink: 0; margin-top: 1px;
+  }
+  .toast-body { flex: 1; }
+  .toast-title { font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.15rem; }
+  .toast-msg   { font-size: 0.875rem; line-height: 1.4; }
+
+  .toast-close {
+    background: none; border: none; cursor: pointer;
+    opacity: 0.45; font-size: 1rem; padding: 0; line-height: 1;
+    color: inherit; flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .toast-close:hover { opacity: 1; }
+
+  /* progress bar */
+  .toast-progress {
+    position: absolute; bottom: 0; left: 0; height: 3px;
+    border-radius: 0 0 10px 10px;
+    animation: toast-progress 4s linear forwards;
+  }
+  .toast.success .toast-progress { background: #6AC383; }
+  .toast.error   .toast-progress { background: #ff6b6b; }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(60px) scale(0.92); }
+    to   { opacity: 1; transform: translateX(0)    scale(1);    }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: translateX(0)    scale(1);    max-height: 200px; margin-bottom: 0; }
+    to   { opacity: 0; transform: translateX(60px) scale(0.92); max-height: 0;     margin-bottom: -0.6rem; }
+  }
+  @keyframes toast-progress {
+    from { width: 100%; }
+    to   { width: 0%; }
+  }
+</style>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+  (function () {
+    const DURATION = 4000;
+
+    function createToast(msg, type) {
+      const isSuccess = type.includes('success');
+      const t = document.createElement('div');
+      t.className = 'toast ' + (isSuccess ? 'success' : 'error');
+      t.innerHTML = `
+        <span class="toast-icon">${isSuccess ? '✓' : '✕'}</span>
+        <div class="toast-body">
+          <div class="toast-title">${isSuccess ? 'Success' : 'Error'}</div>
+          <div class="toast-msg">${msg}</div>
+        </div>
+        <button class="toast-close" aria-label="Dismiss">✕</button>
+        <div class="toast-progress"></div>
+      `;
+
+      const container = document.getElementById('toast-container');
+      container.appendChild(t);
+
+      const timer = setTimeout(() => dismiss(t), DURATION);
+
+      t.querySelector('.toast-close').addEventListener('click', () => {
+        clearTimeout(timer);
+        dismiss(t);
+      });
+    }
+
+    function dismiss(el) {
+      el.classList.add('hide');
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+    }
+
+    document.querySelectorAll('.toast-data').forEach(el => {
+      createToast(el.dataset.msg, el.dataset.type);
+    });
+  })();
+</script>
+
+{% endblock %}

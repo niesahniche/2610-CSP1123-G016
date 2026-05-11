@@ -61,6 +61,11 @@ class Grocery(models.Model):
  
  
 class Recipe(models.Model):
+    BUDGET_CHOICES = [
+        ('low',    'Below RM5'),
+        ('medium', 'RM5 – RM15'),
+        ('high',   'Above RM15'),
+    ]
     name         = models.CharField(max_length=100)
     # ingredients → ManyToMany to Ingredient table (separate from Grocery)
     ingredients  = models.ManyToManyField(
@@ -72,6 +77,12 @@ class Recipe(models.Model):
     appliance    = models.CharField(max_length=100)
     instructions = models.TextField()
     image_url    = models.URLField(max_length=500, null=True, blank=True)
+    # is_halal → whether this recipe is halal (default True)
+    is_halal     = models.BooleanField(default=True)
+    # budget → estimated cost bracket
+    budget       = models.CharField(
+        max_length=10, choices=BUDGET_CHOICES, default='low'
+    )
     filters      = models.ManyToManyField(RecipeFilter, blank=True)
     # user → AppUser who created this recipe
     user         = models.ForeignKey(
@@ -103,19 +114,6 @@ class FavouriteRecipe(models.Model):
         return f"{self.user.username} favourited {self.recipe.name}"
  
  
-class Comment(models.Model):
-    user       = models.ForeignKey('pages.AppUser', on_delete=models.CASCADE)
-    recipe     = models.ForeignKey(Recipe, on_delete=models.CASCADE)
-    commentary = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
- 
-    def __str__(self):
-        return f"Comment by {self.user.username} on {self.recipe.name}"
-    
-    class Meta:
-        ordering = ['-created_at']
-
-
 class Rating(models.Model):
     STAR_CHOICES = [(i, str(i)) for i in range(1, 6)]
     

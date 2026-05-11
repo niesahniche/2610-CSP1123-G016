@@ -10,7 +10,7 @@ from django.db.models import Avg
 from .forms import AppUserCreationForm, RecipeForm
 import json
 
-from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating
+from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Rating
 
 
 # ── Home ──────────────────────────────────────────────────────────────────────
@@ -20,6 +20,19 @@ def home(request):
 # ── About ─────────────────────────────────────────────────────────────────────
 def about(request):
     return render(request, "pages/about.html")
+
+# ── Ingredient search API ─────────────────────────────────────────────────────
+# GET /api/ingredients/?q=chicken
+# Returns matching Ingredient rows as JSON for autocomplete in grocery/add_recipe
+@require_http_methods(['GET'])
+def ingredient_search(request):
+    q = request.GET.get('q', '').strip()
+    if q:
+        ingredients = Ingredient.objects.filter(name__icontains=q).order_by('name')[:20]
+    else:
+        ingredients = Ingredient.objects.all().order_by('name')[:50]
+    data = [{'id': i.id, 'name': i.name} for i in ingredients]
+    return JsonResponse(data, safe=False)
 
 # ── Grocery ───────────────────────────────────────────────────────────────────
 def grocery(request):
@@ -131,6 +144,12 @@ def recipe_list(request):
 
     if search:
         recipes = recipes.filter(name__icontains=search)
+            # search by ingredient name — filters recipes that contain a matching ingredient
+    ingredient_search_q = request.GET.get('ingredient', '')
+    if ingredient_search_q:
+        recipes = recipes.filter(
+            ingredients__name__icontains=ingredient_search_q
+        ).distinct()
     paginator = Paginator(recipes, 6)
     recipes_page = paginator.get_page(request.GET.get('page'))
 
@@ -181,6 +200,18 @@ def recipe_filter(request):
     elif time == 'long':
         recipes = recipes.filter(cooking_time__gt=30)
 
+    # halal filter — Recipe.is_halal (BooleanField)
+    halal = request.GET.get('halal', '')
+    if halal == 'true':
+        recipes = recipes.filter(is_halal=True)
+    elif halal == 'false':
+        recipes = recipes.filter(is_halal=False)
+ 
+    # budget filter — Recipe.budget (CharField with choices)
+    budgets = request.GET.getlist('budget')
+    if budgets:
+        recipes = recipes.filter(budget__in=budgets)
+
     return render(request, 'pages/recipe_filter.html', {'recipes': recipes})
 
 
@@ -191,9 +222,6 @@ def recipe_detail(request, id):
         request.user.is_authenticated and
         FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
     )
-    
-    # Get comments for this recipe
-    comments = Comment.objects.filter(recipe=recipe)
     
     # Get ratings for this recipe
     ratings = recipe.ratings.all()
@@ -211,7 +239,6 @@ def recipe_detail(request, id):
     return render(request, 'pages/recipe_detail.html', {
         'recipe':          recipe,
         'is_saved':        is_fav,
-        'comments':        comments,
         'avg_rating':      avg_rating,
         'total_ratings':   total_ratings,
         'user_rating':     user_rating,
@@ -222,14 +249,9 @@ def recipe_detail(request, id):
 @login_required
 def add_recipe(request):
     user = request.user
-    custom_ingredients_value = ''
 
     if request.method == 'POST':
         form = RecipeForm(request.POST)
-        custom_ingredients_value = request.POST.get('custom_ingredients', '')
-
-        # set the ingredients queryset to all available ingredients
-        form.fields['ingredients'].queryset = Ingredient.objects.all()
 
         if form.is_valid():
             # create the Recipe row but don't save to DB yet (commit=False)
@@ -240,18 +262,22 @@ def add_recipe(request):
             # save ManyToMany (ingredients)
             form.save_m2m()
 
-            # Handle new ingredients (comma-separated input)
+            # Handle new ingredients typed in add_recipe.html.
+            # Each name is saved globally, then linked to this recipe.
             new_ingredients_str = request.POST.get('new_ingredients', '').strip()
+            new_ingredients = []
             if new_ingredients_str:
-                ingredient_names = [name.strip() for name in new_ingredients_str.split(',') if name.strip()]
-                
-                for name in ingredient_names:
-                    # Create Ingredient if it doesn't exist
-                    ingredient, created = Ingredient.objects.get_or_create(name=name)
-                    
-                    # Add to recipe's ingredients
-                    recipe.ingredients.add(ingredient)
+                for name in new_ingredients_str.split(','):
+                    name = name.strip()
+                    if name:
+                        ing, _ = Ingredient.objects.get_or_create(
+                            name__iexact=name,
+                            defaults={'name': name},
+                        )
+                        new_ingredients.append(ing)
 
+            if new_ingredients:
+                recipe.ingredients.add(*new_ingredients)
             messages.success(request, f'"{recipe.name}" has been added!')
             return redirect('recipe_detail', id=recipe.id)
         else:
@@ -387,13 +413,20 @@ def check_ingredients(request, recipe_id):
     recipe_ingredients = recipe.ingredients.all()
     
     # Get ingredient names user has available in their grocery list
-    my_available_names = set(
+    my_available = set(
         Grocery.objects.filter(user=user, status='available')
         .values_list('name', flat=True)
     )
+    my_available_normalized = {name.strip().lower() for name in my_available if name}
  
-    available = [ing.name for ing in recipe_ingredients if ing.name in my_available_names]
-    missing   = [ing.name for ing in recipe_ingredients if ing.name not in my_available_names]
+    available = [
+        ing.name for ing in recipe_ingredients
+        if ing.name.strip().lower() in my_available_normalized
+    ]
+    missing = [
+        ing.name for ing in recipe_ingredients
+        if ing.name.strip().lower() not in my_available_normalized
+    ]
  
     return JsonResponse({
         'recipe':    recipe.name,
@@ -416,16 +449,17 @@ def add_ingredients_to_grocery(request, recipe_id):
     recipe_ingredients = recipe.ingredients.all()
     
     # Get ingredient names user has available in their grocery list
-    my_available_names = set(
+    my_available = set(
         Grocery.objects.filter(user=user, status='available')
         .values_list('name', flat=True)
     )
+    my_available_normalized = {name.strip().lower() for name in my_available if name}
     
     added_available = []
     added_missing   = []
  
     for ing in recipe_ingredients:
-        if ing.name in my_available_names:
+        if ing.name.strip().lower() in my_available_normalized:
             # user already has this
             added_available.append(ing.name)
         else:
@@ -483,56 +517,6 @@ def profile(request):
         'user':              request.user,
         'favourites': favourites,
     })
-
-
-# ── Comments API ──────────────────────────────────────────────────────────────
-@csrf_exempt
-@require_http_methods(['POST'])
-def add_comment(request, recipe_id):
-    """Add a comment to a recipe"""
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-    user = request.user if request.user.is_authenticated else AppUser.objects.first()
-    
-    try:
-        data = json.loads(request.body)
-        commentary = data.get('comment', '').strip()
-        
-        if not commentary:
-            return JsonResponse({'error': 'Comment cannot be empty'}, status=400)
-        
-        comment = Comment.objects.create(
-            user=user,
-            recipe=recipe,
-            commentary=commentary
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'comment_id': comment.id,
-            'username': user.username,
-            'commentary': commentary,
-            'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        }, status=201)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-
-@require_http_methods(['GET'])
-def get_comments(request, recipe_id):
-    """Get all comments for a recipe"""
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-    comments = Comment.objects.filter(recipe=recipe)
-    
-    data = [
-        {
-            'comment_id': c.id,
-            'username': c.user.username,
-            'commentary': c.commentary,
-            'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        }
-        for c in comments
-    ]
-    return JsonResponse(data, safe=False)
 
 
 # ── Rating API ────────────────────────────────────────────────────────────────

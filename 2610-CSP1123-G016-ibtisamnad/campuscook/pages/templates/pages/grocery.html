@@ -355,29 +355,100 @@
   .select2-results__option--highlighted {
     background-color: #96D4AA !important;
   }
+
+  .autocomplete_results {
+  list-style: none; position: absolute; z-index: 100;
+  background: #fff; border: 1.5px solid #6ac383;
+  border-radius: 7px; max-height: 200px; overflow-y: auto;
+  width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin-top: 2px;
+}
+.autocomplete_item {
+  padding: 0.5rem 0.9rem; cursor: pointer; font-size: 0.9rem;
+}
+.autocomplete_item:hover { background: #f0faf4; color: #2d6a4f; }
+.form_group_select { position: relative; }
+
 </style>
 
 <script>
-  // Initialize Select2 with autocomplete
+  // Ingredient autocomplete using /api/ingredients/?q=
+  const input = document.getElementById('ingredient_select');
+
+  // Replace the select with a text input + datalist for native autocomplete
+  // (works without jQuery/Select2)
   document.addEventListener('DOMContentLoaded', function() {
-    $('#ingredient_select').select2({
-      placeholder: '-- Select or search ingredient --',
-      allowClear: true,
-      width: '100%',
-      containerCssClass: 'select2-container-custom'
+    const select = document.getElementById('ingredient_select');
+    const wrapper = select.parentElement;
+
+    // create text input
+    const textInput = document.createElement('input');
+    textInput.type        = 'text';
+    textInput.id          = 'ingredient_autocomplete';
+    textInput.placeholder = '-- Search ingredient --';
+    textInput.className   = 'ingredient_select_dropdown';
+    textInput.autocomplete = 'off';
+
+    // create hidden input to hold the actual ID
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'ingredient_id';
+    hiddenInput.id   = 'ingredient_id_hidden';
+
+    // create dropdown results list
+    const resultsList = document.createElement('ul');
+    resultsList.id        = 'ingredient_results';
+    resultsList.className = 'autocomplete_results';
+    resultsList.style.display = 'none';
+
+    wrapper.replaceChild(textInput, select);
+    wrapper.appendChild(hiddenInput);
+    wrapper.appendChild(resultsList);
+
+    // fetch matching ingredients from API on input
+    textInput.addEventListener('input', async function() {
+      const q = this.value.trim();
+      hiddenInput.value = ''; // clear selection when typing
+
+      if (q.length < 1) { resultsList.style.display = 'none'; return; }
+
+      try {
+        const res  = await fetch(`/api/ingredients/?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        resultsList.innerHTML = '';
+        if (!data.length) { resultsList.style.display = 'none'; return; }
+
+        data.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent        = item.name;
+          li.dataset.id         = item.id;
+          li.className          = 'autocomplete_item';
+          li.addEventListener('click', () => {
+            textInput.value   = item.name;
+            hiddenInput.value = item.id;
+            resultsList.style.display = 'none';
+          });
+          resultsList.appendChild(li);
+        });
+
+        resultsList.style.display = 'block';
+      } catch (err) {
+        console.error('Ingredient search error:', err);
+      }
+    });
+
+    // hide results on outside click
+    document.addEventListener('click', function(e) {
+      if (!wrapper.contains(e.target)) resultsList.style.display = 'none';
     });
   });
 
-  // Handle new ingredients preview
+  // new ingredients preview tags (unchanged)
   document.getElementById('new_ingredients_input').addEventListener('input', function () {
     const tagContainer = document.getElementById('new_ingredients_tags');
-    const names = this.value.split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-    
-    tagContainer.innerHTML = names
-      .map(name => `<span class="ingredient_tag">+ ${name}</span>`)
-      .join('');
+    const names = this.value.split(',').map(s => s.trim()).filter(Boolean);
+    tagContainer.innerHTML = names.map(n => `<span class="ingredient_tag">+ ${n}</span>`).join('');
   });
 </script>
 

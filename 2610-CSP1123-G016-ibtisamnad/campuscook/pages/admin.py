@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import AppUser, FavouriteRecipe, Recipe, Ingredient, Grocery, Comment, RecipeFilter
+from .models import AppUser, FavouriteRecipe, Recipe, Ingredient, Grocery, RecipeFilter
 
 # ── AppUser ───────────────────────────────────────────────────────────────────
 @admin.register(AppUser)
@@ -71,12 +71,6 @@ class FavouriteRecipeAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return qs
         return qs.filter(user=request.user)
- 
- 
-# ── Comment ───────────────────────────────────────────────────────────────────
-@admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe', 'commentary')
  
  
 # ── RecipeFilter ──────────────────────────────────────────────────────────────

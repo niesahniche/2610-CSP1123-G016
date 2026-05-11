@@ -10,7 +10,7 @@ from django.db.models import Avg
 from .forms import AppUserCreationForm, RecipeForm
 import json
 
-from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating
+from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Rating
 
 
 # ── Home ──────────────────────────────────────────────────────────────────────
@@ -223,9 +223,6 @@ def recipe_detail(request, id):
         FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
     )
     
-    # Get comments for this recipe
-    comments = Comment.objects.filter(recipe=recipe)
-    
     # Get ratings for this recipe
     ratings = recipe.ratings.all()
     avg_rating = ratings.aggregate(Avg('stars'))['stars__avg'] or 0
@@ -242,7 +239,6 @@ def recipe_detail(request, id):
     return render(request, 'pages/recipe_detail.html', {
         'recipe':          recipe,
         'is_saved':        is_fav,
-        'comments':        comments,
         'avg_rating':      avg_rating,
         'total_ratings':   total_ratings,
         'user_rating':     user_rating,
@@ -253,22 +249,9 @@ def recipe_detail(request, id):
 @login_required
 def add_recipe(request):
     user = request.user
-    custom_ingredients_value = ''
 
     if request.method == 'POST':
         form = RecipeForm(request.POST)
-        # handle custom new ingredients typed in the form
-        # each gets added to global Ingredient table then linked to the recipe
-        custom_raw    = request.POST.get('custom_ingredients', '').strip()
-        new_ingredients = []
-        if custom_raw:
-            for name in custom_raw.split(','):
-                name = name.strip()
-                if name:
-                    ing, _ = Ingredient.objects.get_or_create(
-                        name__iexact=name, defaults={'name': name}
-                    )
-                    new_ingredients.append(ing)
 
         if form.is_valid():
             # create the Recipe row but don't save to DB yet (commit=False)
@@ -279,8 +262,20 @@ def add_recipe(request):
             # save ManyToMany (ingredients)
             form.save_m2m()
 
-            # Handle new ingredients (comma-separated input)
+            # Handle new ingredients typed in add_recipe.html.
+            # Each name is saved globally, then linked to this recipe.
             new_ingredients_str = request.POST.get('new_ingredients', '').strip()
+            new_ingredients = []
+            if new_ingredients_str:
+                for name in new_ingredients_str.split(','):
+                    name = name.strip()
+                    if name:
+                        ing, _ = Ingredient.objects.get_or_create(
+                            name__iexact=name,
+                            defaults={'name': name},
+                        )
+                        new_ingredients.append(ing)
+
             if new_ingredients:
                 recipe.ingredients.add(*new_ingredients)
             messages.success(request, f'"{recipe.name}" has been added!')
@@ -422,11 +417,16 @@ def check_ingredients(request, recipe_id):
         Grocery.objects.filter(user=user, status='available')
         .values_list('name', flat=True)
     )
+    my_available_normalized = {name.strip().lower() for name in my_available if name}
  
-    available = [ing.name for ing in recipe_ingredients 
-                 if my_available.filter(name__iexact=ing.name).exists()]
-    missing   = [ing.name for ing in recipe_ingredients 
-                 if not my_available.filter(name__iexact=ing.name).exists()]
+    available = [
+        ing.name for ing in recipe_ingredients
+        if ing.name.strip().lower() in my_available_normalized
+    ]
+    missing = [
+        ing.name for ing in recipe_ingredients
+        if ing.name.strip().lower() not in my_available_normalized
+    ]
  
     return JsonResponse({
         'recipe':    recipe.name,
@@ -453,12 +453,13 @@ def add_ingredients_to_grocery(request, recipe_id):
         Grocery.objects.filter(user=user, status='available')
         .values_list('name', flat=True)
     )
+    my_available_normalized = {name.strip().lower() for name in my_available if name}
     
     added_available = []
     added_missing   = []
  
     for ing in recipe_ingredients:
-        if ing.name in my_available:
+        if ing.name.strip().lower() in my_available_normalized:
             # user already has this
             added_available.append(ing.name)
         else:
@@ -516,56 +517,6 @@ def profile(request):
         'user':              request.user,
         'favourites': favourites,
     })
-
-
-# ── Comments API ──────────────────────────────────────────────────────────────
-@csrf_exempt
-@require_http_methods(['POST'])
-def add_comment(request, recipe_id):
-    """Add a comment to a recipe"""
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-    user = request.user if request.user.is_authenticated else AppUser.objects.first()
-    
-    try:
-        data = json.loads(request.body)
-        commentary = data.get('comment', '').strip()
-        
-        if not commentary:
-            return JsonResponse({'error': 'Comment cannot be empty'}, status=400)
-        
-        comment = Comment.objects.create(
-            user=user,
-            recipe=recipe,
-            commentary=commentary
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'comment_id': comment.id,
-            'username': user.username,
-            'commentary': commentary,
-            'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        }, status=201)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-
-@require_http_methods(['GET'])
-def get_comments(request, recipe_id):
-    """Get all comments for a recipe"""
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-    comments = Comment.objects.filter(recipe=recipe)
-    
-    data = [
-        {
-            'comment_id': c.id,
-            'username': c.user.username,
-            'commentary': c.commentary,
-            'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        }
-        for c in comments
-    ]
-    return JsonResponse(data, safe=False)
 
 
 # ── Rating API ────────────────────────────────────────────────────────────────

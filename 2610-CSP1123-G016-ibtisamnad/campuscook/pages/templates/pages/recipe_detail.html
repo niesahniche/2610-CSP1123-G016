@@ -109,26 +109,6 @@
                 </ul>
             </section>
 
-            <!-- 2-STEP INGREDIENT CHECK ─────────────────────────────────
-                     Only shown to logged-in users.
-                     Step 1: "Check my ingredients" button
-                             → calls check_ingredients API
-                             → shows popup with available/missing split
-                             → nothing added to grocery yet
-                     Step 2: "Add to Grocery List" button inside popup
-                             → calls add_ingredients API
-                             → adds available (confirmed) + missing to grocery
-                             → shows final confirmation                      -->
-            {% if user.is_authenticated and recipe.ingredients.count > 0 %}
-                <button
-                    class="btn_check_ingredients"
-                    data-recipe-id="{{ recipe.id }}"
-                    onclick="step1CheckIngredients(this)"
-                >
-                    🛒 Check my ingredients
-                </button>
-            {% endif %}
-
             <!-- INSTRUCTIONS SECTION ────────────────────────────────────────
                  recipe.instructions → TextField from Recipe table            -->
             <section class="detail_section">
@@ -161,53 +141,6 @@
                 </div>
             </section>
             {% endif %}
-
-            <!-- COMMENTS SECTION ────────────────────────────────────────────
-                 Shows all comments on the recipe
-                 Logged-in users can add new comments                         -->
-            <section class="detail_section">
-                <h2 class="section_title">Comments 💬</h2>
-                
-                <!-- COMMENT FORM ─ only for logged-in users ─────────────────-->
-                {% if user.is_authenticated %}
-                <div class="comment_form_wrap">
-                    <form class="comment_form" onsubmit="submitComment(event, {{ recipe.id }})">
-                        {% csrf_token %}
-                        <textarea 
-                            id="commentInput"
-                            class="comment_input" 
-                            placeholder="Share your thoughts about this recipe..."
-                            rows="3"
-                            required
-                        ></textarea>
-                        <button type="submit" class="comment_submit">Post Comment</button>
-                    </form>
-                </div>
-                {% else %}
-                <div class="comment_login_prompt">
-                    <p>🔒 <a href="{% url 'login' %}">Log in</a> to leave a comment</p>
-                </div>
-                {% endif %}
-
-                <!-- COMMENTS LIST ───────────────────────────────────────────-->
-                <div class="comments_list" id="commentsList">
-                    {% if comments %}
-                        {% for comment in comments %}
-                            <div class="comment_item">
-                                <div class="comment_header">
-                                    <strong class="comment_author">{{ comment.user.username }}</strong>
-                                    <span class="comment_date">{{ comment.created_at|date:"M d, Y H:i" }}</span>
-                                </div>
-                                <p class="comment_text">{{ comment.commentary }}</p>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="no_comments">
-                            <p>No comments yet. Be the first to share your thoughts!</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </section>
 
             <!-- BOTTOM NAVIGATION ───────────────────────────────────────────-->
             <div class="detail_footer_links">
@@ -278,22 +211,6 @@
     .star_btn:hover { color: #ffd700; }
     .star_btn.active { color: #ffd700; }
     .current_rating { display: block; font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
-    .comment_form_wrap { background: #f9f9f9; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; }
-    .comment_form { display: flex; flex-direction: column; gap: 0.8rem; }
-    .comment_input { padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; }
-    .comment_input:focus { outline: none; border-color: #96D4AA; background: #f0faf4; }
-    .comment_submit { padding: 0.7rem 1.5rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .comment_submit:hover { background: #6ac383; }
-    .comment_login_prompt { background: #f0faf4; padding: 1.5rem; border-radius: 10px; text-align: center; margin-bottom: 1.5rem; }
-    .comment_login_prompt a { color: #2d6a4f; font-weight: 600; text-decoration: none; }
-    .comment_login_prompt a:hover { text-decoration: underline; }
-    .comments_list { display: flex; flex-direction: column; gap: 1rem; }
-    .comment_item { background: #f9f9f9; padding: 1rem; border-radius: 8px; border-left: 4px solid #96D4AA; }
-    .comment_header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem; }
-    .comment_author { color: #2d6a4f; font-size: 0.95rem; }
-    .comment_date { font-size: 0.8rem; color: #999; }
-    .comment_text { color: #555; line-height: 1.6; margin: 0; word-wrap: break-word; }
-    .no_comments { text-align: center; padding: 2rem; color: #999; font-style: italic; }
 </style>
 
 <!-- FAVOURITE RECIPE SCRIPT ───────────────────────────────────────────────────────
@@ -317,7 +234,7 @@
             showToast('Could not check ingredients. Try again.', 'error');
         } finally {
             btn.disabled    = false;
-            btn.textContent = '🛒 Check my ingredients';
+            btn.textContent = btn.classList.contains('btn_tomake') ? '🍳 To Make' : '🛒 Check my ingredients';
         }
     }
  
@@ -507,58 +424,6 @@
         }
     }
 
-    // ── Submit Comment ────────────────────────────────────────────────────────
-    async function submitComment(event, recipeId) {
-        event.preventDefault();
-        
-        const textarea = document.getElementById('commentInput');
-        const comment = textarea.value.trim();
-        
-        if (!comment) {
-            showToast('Comment cannot be empty', 'error');
-            return;
-        }
-        
-        try {
-            const res = await fetch(`/api/add-comment/${recipeId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken'),
-                },
-                body: JSON.stringify({ comment }),
-            });
-            if (!res.ok) throw new Error();
-            
-            const data = await res.json();
-            
-            // Clear textarea
-            textarea.value = '';
-            
-            // Add comment to list
-            const commentsList = document.getElementById('commentsList');
-            const noComments = commentsList.querySelector('.no_comments');
-            
-            const newComment = `
-                <div class="comment_item">
-                    <div class="comment_header">
-                        <strong class="comment_author">${data.username}</strong>
-                        <span class="comment_date">${data.created_at}</span>
-                    </div>
-                    <p class="comment_text">${data.commentary}</p>
-                </div>
-            `;
-            
-            if (noComments) {
-                noComments.remove();
-            }
-            
-            commentsList.insertAdjacentHTML('afterbegin', newComment);
-            showToast('Comment posted! 💬', 'success');
-        } catch (e) {
-            showToast('Could not post comment. Try again.', 'error');
-        }
-    }
 </script>
 
 {% endblock %}

@@ -68,7 +68,15 @@
                     🔧 {{ recipe.appliance }}
                 </span>
 
-            </div>
+                <span class="recipe_budget">
+                    💰 {{ recipe.get_budget_display }}
+                </span>
+                
+                {% if recipe.is_halal %}
+                    <span class="recipe_halal">✅ Halal</span>
+                {% else %}
+                    <span class="recipe_nonhalal">❌ Non-Halal</span>
+                {% endif %}
 
             <!-- RECIPE CREATOR & RATING ────────────────────────────────────
                  recipe.user.username → creator name

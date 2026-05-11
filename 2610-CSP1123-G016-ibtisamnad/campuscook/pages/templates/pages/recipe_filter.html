@@ -21,6 +21,18 @@
       >
     </div>
 
+    <!-- INGREDIENT SEARCH — filters recipes containing this ingredient -->
+    <div class="filter_group">
+      <label class="filter_label">Search by Ingredient</label>
+      <input
+        type="text"
+        name="ingredient"
+        class="filter_input"
+        placeholder="e.g. eggs, garlic..."
+        value="{{ request.GET.ingredient }}"
+      >
+    </div>
+
     <!-- COOKING TIME — maps to Recipe.cooking_time (IntegerField)
          quick=<15, medium=15-30, long=>30 handled in views.py      -->
     <div class="filter_group">
@@ -72,7 +84,8 @@
         <label class="filter_check"><input type="checkbox" name="category" value="dessert"> Dessert</label>
       </div>
     </div>
-
+  -->
+    
     <div class="filter_group">
       <label class="filter_label">Budget</label>
       <div class="filter_options">
@@ -90,7 +103,6 @@
         <label class="filter_check"><input type="radio" name="halal" value="false"> Non-Halal Only</label>
       </div>
     </div>
-    ── -->
 
     <div class="filter_buttons">
       <button type="submit" class="btn_apply">Apply Filters</button>
@@ -119,7 +131,12 @@
             <div class="card_tags">
               <span class="recipe_time">⏱ {{ recipe.cooking_time }} mins</span>
               <span class="recipe_appliance">🔧 {{ recipe.appliance }}</span>
-              <!-- add category/budget/halal tags here once fields exist in model -->
+              <span class="recipe_budget">💰 {{ recipe.get_budget_display }}</span>
+              {% if recipe.is_halal %}
+                <span class="recipe_halal">✅ Halal</span>
+              {% else %}
+                <span class="recipe_nonhalal">❌ Non-Halal</span>
+              {% endif %}
             </div>
 
             <a href="{% url 'recipe_detail' recipe.id %}" class="recipe_link">View Recipe →</a>

@@ -38,10 +38,6 @@ urlpatterns = [
     path("api/check-ingredients/<int:recipe_id>/",      views.check_ingredients,        name="check_ingredients"),
     path("api/add-ingredients/<int:recipe_id>/",        views.add_ingredients_to_grocery, name="add_ingredients_to_grocery"),
 
-    # ── Comments API ──────────────────────────────────────────────────────────
-    path("api/comments/<int:recipe_id>/",      views.get_comments,  name="get_comments"),
-    path("api/add-comment/<int:recipe_id>/",   views.add_comment,   name="add_comment"),
-
     # ── Ratings API ───────────────────────────────────────────────────────────
     path("api/rate/<int:recipe_id>/",          views.rate_recipe,         name="rate_recipe"),
     path("api/ratings/<int:recipe_id>/",       views.get_recipe_ratings,  name="get_recipe_ratings"),

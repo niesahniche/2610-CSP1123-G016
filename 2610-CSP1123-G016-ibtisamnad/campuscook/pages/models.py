@@ -114,7 +114,7 @@ class FavouriteRecipe(models.Model):
         return f"{self.user.username} favourited {self.recipe.name}"
  
  
-class Comment(models.Model):
+ class Comment(models.Model):
     user       = models.ForeignKey('pages.AppUser', on_delete=models.CASCADE)
     recipe     = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     commentary = models.TextField()
@@ -125,8 +125,8 @@ class Comment(models.Model):
     
     class Meta:
         ordering = ['-created_at']
-
-
+        
+        
 class Rating(models.Model):
     STAR_CHOICES = [(i, str(i)) for i in range(1, 6)]
     

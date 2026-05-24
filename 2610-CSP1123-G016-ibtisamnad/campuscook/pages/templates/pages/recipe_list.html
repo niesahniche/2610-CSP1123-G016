@@ -82,10 +82,10 @@
                 </div>
 
                 <!-- cooking_time and appliance → fields from Recipe table -->
-                <p class="card_meta">⏱ {{ recipe.cooking_time }} mins | 🔧 {{ recipe.appliance }}</p>
+                <p class="card_meta">⏱ {{ item.recipe.cooking_time }} mins | 🔧 {{ item.recipe.appliance }}</p>
                 <p class="card_tags">
-                    💰 {{ recipe.get_budget_display }}
-                    {% if recipe.is_halal %}✅ Halal{% else %}❌ Non-Halal{% endif %}
+                    💰 {{ item.recipe.get_budget_display }}
+                    {% if item.recipe.is_halal %}✅ Halal{% else %}❌ Non-Halal{% endif %}
                 </p>
                 
                 <!-- Favourite BUTTON ──────────────────────────────────────────────

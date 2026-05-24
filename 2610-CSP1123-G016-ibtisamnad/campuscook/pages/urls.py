@@ -10,6 +10,7 @@ urlpatterns = [
     # ── Grocery ───────────────────────────────────────────────────────────────
     path("grocery/",          views.grocery,     name="grocery"),
     path("grocery/purchased/<int:id>/", views.purchase_item, name="purchase_item"),
+    path("grocery/transfer-purchased/", views.transfer_purchased_to_available, name="transfer_purchased_to_available"),
     path("remove/<int:id>/",  views.remove_item, name="remove_item"),
     
     # Ingredient search API — for autocomplete in grocery and add_recipe

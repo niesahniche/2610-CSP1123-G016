@@ -186,7 +186,8 @@
     .ingredient-section.available h4 { color: #2d6a4f; }
     .ingredient-section.missing  h4  { color: #b85c38; }
     .ingredient-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
-    .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
+    .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; }
+    .ingredient-list li .item_for { font-size: 0.78rem; color: #555; font-style: italic; white-space: nowrap; }
     .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
     .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
     .missing_summary { margin-top: 1rem; padding: 1rem; border: 1px solid #f5ddd4; border-radius: 10px; background: #fff8f5; }
@@ -247,7 +248,7 @@
             <div class="ingredient-section available">
                 <h4>✅ You have these (${available.length})</h4>
                 <ul class="ingredient-list">
-                    ${available.map(n => `<li>${n}</li>`).join('')}
+                    ${available.map(n => `<li>${n} <span class="item_for">for: ${data.recipe}</span></li>`).join('')}
                 </ul>
             </div>` : '';
  
@@ -266,7 +267,7 @@
                 onclick="step2AddToGrocery(${data.recipe_id})"
             >
                 ${data.can_cook
-                    ? '✅ Add available ingredients to grocery list'
+                    ? '✅ Mark available ingredients for this recipe'
                     : '🛒 Add all to grocery list (missing items flagged)'}
             </button>`;
  
@@ -277,8 +278,8 @@
             </div>
             <div class="popup-msg">
                 ${data.can_cook
-                    ? `You can make <strong>${data.recipe}</strong> with what you have.`
-                    : `You're missing some ingredients for <strong>${data.recipe}</strong>.`}
+                    ? `You can make <strong>${data.recipe}</strong> with what you have. Available ingredients are now marked for this recipe.`
+                    : `You're missing some ingredients for <strong>${data.recipe}</strong>. Available ingredients are still marked for this recipe.`}
             </div>
             ${availableHtml}
             ${missingHtml}

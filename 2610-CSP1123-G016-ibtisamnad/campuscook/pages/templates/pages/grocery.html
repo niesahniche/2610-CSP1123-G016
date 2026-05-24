@@ -69,12 +69,23 @@
       <h2 class="section_heading available_heading">
         ✅ Available <span class="count">({{ available|length }})</span>
       </h2>
+      {% if completed_recipes %}
+      <div class="completed_section">
+        <h3 class="subheading completed_heading">Now I can cook</h3>
+        <ul class="completed_list">
+          {% for recipe_name in completed_recipes %}
+            <li class="completed_item">{{ recipe_name }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
       <ul class="grocery_list">
         {% for item in available %}
           <li class="grocery_item">
             <div class="item_info">
               <span class="item_name">{{ item.name }}</span>
               {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+              {% if item.for_recipe %}<span class="item_for">for: {{ item.for_recipe }}</span>{% endif %}
               {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
             </div>
             <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
@@ -115,7 +126,15 @@
       </div>
 
       <div class="missing_subsection purchased_section">
-        <h3 class="subheading purchased_heading">Purchased <span class="count">({{ purchased|length }})</span></h3>
+        <div class="purchased_header">
+          <h3 class="subheading purchased_heading">Purchased <span class="count">({{ purchased|length }})</span></h3>
+          {% if purchased %}
+            <form method="post" action="{% url 'transfer_purchased_to_available' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn_transfer">Move all purchased to available</button>
+            </form>
+          {% endif %}
+        </div>
         <ul class="grocery_list">
           {% for item in purchased %}
             <li class="grocery_item purchased_item">

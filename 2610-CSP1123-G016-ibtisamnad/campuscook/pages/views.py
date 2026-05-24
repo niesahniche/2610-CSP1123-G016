@@ -44,7 +44,6 @@ def grocery(request):
         # Add from existing ingredients dropdown
         if action == 'add_from_dropdown':
             ingredient_id = request.POST.get('ingredient_id', '').strip()
-            custom_name = request.POST.get('custom_name', '').strip()
             quantity = request.POST.get('quantity', '').strip() or '1'
             
             if ingredient_id:
@@ -64,7 +63,6 @@ def grocery(request):
                         Grocery.objects.create(
                             user=user,
                             name=ingredient.name,
-                            custom_name=custom_name or None,
                             quantity=quantity,
                             status='available'
                         )
@@ -72,38 +70,36 @@ def grocery(request):
                 except Ingredient.DoesNotExist:
                     messages.error(request, 'Ingredient not found.')
         
-        # Add new ingredients (comma-separated)
+        # Add new ingredient (single entry)
         elif action == 'add_new_ingredients':
-            new_ingredients_str = request.POST.get('new_ingredients', '').strip()
+            new_ingredient_name = request.POST.get('new_ingredients', '').strip()
+            quantity = request.POST.get('quantity', '').strip() or '1'
             
-            if new_ingredients_str:
-                ingredient_names = [name.strip() for name in new_ingredients_str.split(',') if name.strip()]
-                added_count = 0
-                
-                for name in ingredient_names:
-                    # Create Ingredient if it doesn't exist
-                    ingredient, created = Ingredient.objects.get_or_create(name=name)
-                    
-                    # Check if already exists for user
+            if new_ingredient_name:
+                # Only allow one ingredient entry
+                if ',' in new_ingredient_name:
+                    new_ingredient_name = new_ingredient_name.split(',')[0].strip()
+
+                if new_ingredient_name:
+                    ingredient, created = Ingredient.objects.get_or_create(name=new_ingredient_name)
                     existing = Grocery.objects.filter(
                         user=user,
-                        name=name,
+                        name=new_ingredient_name,
                         status='available'
-                    ).exists()
-                    
+                    ).first()
+
                     if not existing:
                         Grocery.objects.create(
                             user=user,
-                            name=name,
+                            name=new_ingredient_name,
                             status='available',
-                            quantity='1'
+                            quantity=quantity
                         )
-                        added_count += 1
-                
-                if added_count > 0:
-                    messages.success(request, f'Added {added_count} ingredient(s) to your grocery list!')
-                else:
-                    messages.info(request, 'These ingredients were already in your grocery list.')
+                        messages.success(request, f'Added {new_ingredient_name} to your grocery list!')
+                    else:
+                        existing.quantity = quantity
+                        existing.save(update_fields=['quantity'])
+                        messages.success(request, f'{new_ingredient_name} quantity updated to {quantity}.')
         
         return redirect('grocery')
 

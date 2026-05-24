@@ -13,6 +13,43 @@ import json
 from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Rating
 
 
+def merge_recipe_labels(existing_label, new_label):
+    labels = []
+    if existing_label:
+        labels.extend([label.strip() for label in existing_label.split(',') if label.strip()])
+    if new_label:
+        labels.append(new_label.strip())
+    return ', '.join(dict.fromkeys(labels))
+
+
+def aggregate_grocery_items(items):
+    grouped = {}
+    for item in items:
+        key = (
+            item.name.strip().lower() if item.name else '',
+            (item.custom_name or '').strip().lower()
+        )
+        entry = grouped.get(key)
+        if not entry:
+            entry = {
+                'id': item.id,
+                'name': item.name,
+                'custom_name': item.custom_name,
+                'quantity': item.quantity,
+                'for_recipe': [],
+            }
+            grouped[key] = entry
+        if item.for_recipe:
+            entry['for_recipe'].extend([
+                label.strip() for label in item.for_recipe.split(',') if label.strip()
+            ])
+        if not entry['quantity'] and item.quantity:
+            entry['quantity'] = item.quantity
+    for entry in grouped.values():
+        entry['for_recipe'] = ', '.join(dict.fromkeys(entry['for_recipe']))
+    return list(grouped.values())
+
+
 # ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
     return render(request, "pages/home.html")
@@ -107,34 +144,31 @@ def grocery(request):
     all_ingredients = Ingredient.objects.all().order_by('name')
     
     # Get user's grocery items
-    available = Grocery.objects.filter(user=user, status='available')
+    available_qs = Grocery.objects.filter(user=user, status='available')
     missing = Grocery.objects.filter(user=user, status='missing')
     purchased = Grocery.objects.filter(user=user, status='purchased')
 
     available_names = {
         name.strip().lower()
-        for name in available.values_list('name', flat=True)
+        for name in available_qs.values_list('name', flat=True)
         if name
     }
-    recipe_labels = {
-        label.strip()
-        for label in available.filter(for_recipe__isnull=False)
-                               .values_list('for_recipe', flat=True)
-        if label
-    }
-    completed_recipes = []
-    for label in recipe_labels:
-        recipes = Recipe.objects.filter(name__iexact=label)
-        for recipe in recipes:
-            required_names = {
-                ingredient_name.strip().lower()
-                for ingredient_name in recipe.ingredients.values_list('name', flat=True)
-                if ingredient_name
-            }
-            if required_names and required_names.issubset(available_names):
-                completed_recipes.append(recipe.name)
-                break
-    
+
+    # Determine recipe completion only from groceries labelled with recipe names
+    recipe_label_map = {}
+    labelled_groceries = Grocery.objects.filter(user=user).exclude(for_recipe__isnull=True).exclude(for_recipe__exact='')
+    for item in labelled_groceries:
+        for label in [label.strip() for label in item.for_recipe.split(',') if label.strip()]:
+            recipe_label_map.setdefault(label, set()).add(item.name.strip().lower())
+
+    completed_recipes = [
+        recipe_name
+        for recipe_name, labelled_names in recipe_label_map.items()
+        if labelled_names and labelled_names.issubset(available_names)
+    ]
+
+    available = aggregate_grocery_items(available_qs)
+
     return render(request, 'pages/grocery.html', {
         'all_ingredients': all_ingredients,
         'available': available,
@@ -346,23 +380,29 @@ def to_make(request, recipe_id):
     missing = recipe_ingredients.exclude(name__in=my_available_names)
  
     # auto-add missing ingredients to Grocery table with status='missing'
-    # skip if already added as missing for this recipe to avoid duplicates
+    # if item already exists for this recipe, merge the recipe label instead of duplicating
     added = []
     for ing in missing:
-        already_missing = Grocery.objects.filter(
+        existing_missing = Grocery.objects.filter(
+            user=user,
+            name__iexact=ing.name,
+            status='missing'
+        ).first()
+
+        if existing_missing:
+            merged_label = merge_recipe_labels(existing_missing.for_recipe, recipe.name)
+            if merged_label != existing_missing.for_recipe:
+                existing_missing.for_recipe = merged_label
+                existing_missing.save(update_fields=['for_recipe'])
+            continue
+
+        Grocery.objects.create(
             user=user,
             name=ing.name,
             status='missing',
-            for_recipe=recipe.name
-        ).exists()
-        if not already_missing:
-            Grocery.objects.create(
-                user=user,
-                name=ing.name,
-                status='missing',
-                for_recipe=recipe.name,
-            )
-            added.append(ing.name)
+            for_recipe=recipe.name,
+        )
+        added.append(ing.name)
  
     return JsonResponse({
         'can_cook':  missing.count() == 0,
@@ -492,17 +532,27 @@ def add_ingredients_to_grocery(request, recipe_id):
                 name__iexact=ing.name,
                 status='available'
             ).first()
-            if grocery_item and grocery_item.for_recipe != recipe.name:
-                grocery_item.for_recipe = recipe.name
+            if grocery_item:
+                grocery_item.for_recipe = merge_recipe_labels(
+                    grocery_item.for_recipe,
+                    recipe.name
+                )
                 grocery_item.save(update_fields=['for_recipe'])
             added_available.append(ing.name)
         else:
             # user doesn't have this — add as missing with recipe note
-            already = Grocery.objects.filter(
-                user=user, name=ing.name,
-                status='missing', for_recipe=recipe.name
-            ).exists()
-            if not already:
+            missing_item = Grocery.objects.filter(
+                user=user,
+                name__iexact=ing.name,
+                status='missing'
+            ).first()
+            if missing_item:
+                missing_item.for_recipe = merge_recipe_labels(
+                    missing_item.for_recipe,
+                    recipe.name
+                )
+                missing_item.save(update_fields=['for_recipe'])
+            else:
                 Grocery.objects.create(
                     user=user, name=ing.name,
                     status='missing', for_recipe=recipe.name

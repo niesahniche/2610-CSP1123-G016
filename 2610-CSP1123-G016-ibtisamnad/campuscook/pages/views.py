@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from .models import Comment
 from django.db.models import Avg
 from .forms import AppUserCreationForm, RecipeForm
 import json
@@ -517,6 +518,78 @@ def profile(request):
         'user':              request.user,
         'favourites': favourites,
     })
+
+
+# ── Comments API ──────────────────────────────────────────────────────────────
+@require_http_methods(["GET"])
+def comment_list(request, recipe_id):
+    """Return all comments for a recipe, newest first."""
+    qs = (
+        Comment.objects
+        .filter(recipe_id=recipe_id)
+        .select_related('user')
+        .order_by('-created_at')
+    )
+    
+    comments_data = []
+    for c in qs:
+        comments_data.append({
+            'id':         c.id,
+            'username':   c.user.username,
+            'commentary': c.commentary,
+            'created_at': c.created_at.strftime('%Y-%m-%d %H:%M'),
+        })
+
+    user_comment_id = None
+    if request.user.is_authenticated:
+        own = qs.filter(user=request.user).first()
+        if own:
+            user_comment_id = own.id
+
+    return JsonResponse({
+        'comments':        comments_data,
+        'count':           len(comments_data),
+        'user_comment_id': user_comment_id,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def comment_create(request, recipe_id):
+    """Create or update the current user's comment on a recipe."""
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+
+    obj, created = Comment.objects.get_or_create(
+        recipe_id=recipe_id,
+        user=request.user,
+        defaults={'commentary': payload.get('commentary', '')},
+    )
+    if not created:
+        obj.commentary = payload.get('commentary', obj.commentary)
+        obj.save()
+
+    return JsonResponse({
+        'id':         obj.id,
+        'username':   obj.user.username,
+        'commentary': obj.commentary,
+        'created_at': obj.created_at.strftime('%Y-%m-%d %H:%M'),
+    }, status=201 if created else 200)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def comment_delete(request, comment_id):
+    """Delete the current user's own comment."""
+    try:
+        comment = Comment.objects.get(id=comment_id, user=request.user)
+    except Comment.DoesNotExist:
+        return JsonResponse({'error': 'Comment not found.'}, status=404)
+
+    comment.delete()
+    return JsonResponse({'deleted': comment_id}, status=200)
 
 
 # ── Rating API ────────────────────────────────────────────────────────────────

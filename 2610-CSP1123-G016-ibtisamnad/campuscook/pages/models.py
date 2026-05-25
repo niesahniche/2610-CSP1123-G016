@@ -113,8 +113,8 @@ class FavouriteRecipe(models.Model):
     def __str__(self):
         return f"{self.user.username} favourited {self.recipe.name}"
  
- 
- class Comment(models.Model):
+
+class Comment(models.Model):
     user       = models.ForeignKey('pages.AppUser', on_delete=models.CASCADE)
     recipe     = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     commentary = models.TextField()

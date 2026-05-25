@@ -61,46 +61,47 @@
     <div class="filter_group">
       <label class="filter_label">Appliance</label>
       <div class="filter_options">
-        <label class="filter_check"><input type="checkbox" name="appliance" value="none"> No Appliance</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="microwave"> Microwave</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="oven"> Oven</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="stove"> Stove</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="airfryer"> Air Fryer</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="blender"> Blender</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="none" {% if 'none' in request.GET.getlist('appliance') %}checked{% endif %}> No Appliance</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="microwave" {% if 'microwave' in request.GET.getlist('appliance') %}checked{% endif %}> Microwave</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="oven" {% if 'oven' in request.GET.getlist('appliance') %}checked{% endif %}> Oven</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="stove" {% if 'stove' in request.GET.getlist('appliance') %}checked{% endif %}> Stove</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="airfryer" {% if 'airfryer' in request.GET.getlist('appliance') %}checked{% endif %}> Air Fryer</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="blender" {% if 'blender' in request.GET.getlist('appliance') %}checked{% endif %}> Blender</label>
       </div>
     </div>
 
-    <!-- ── FILTERS BELOW NOT YET IN models.py ──────────────────────────────
-         Uncomment in BOTH this file AND views.py once fields are added
-         to Recipe model and migrations are run.
+     <!-- MEAL TYPE — maps to Recipe.meal_type (CharField) -->
+     <!-- Multiple meal types can be selected, handled via __in filter in views.py -->
+     <!-- Values should match those defined in Recipe model's meal_type choices -->
 
     <div class="filter_group">
-      <label class="filter_label">Category</label>
+      <label class="filter_label">Meal Type</label>
       <div class="filter_options">
-        <label class="filter_check"><input type="checkbox" name="category" value="breakfast"> Breakfast</label>
-        <label class="filter_check"><input type="checkbox" name="category" value="lunch"> Lunch</label>
-        <label class="filter_check"><input type="checkbox" name="category" value="dinner"> Dinner</label>
-        <label class="filter_check"><input type="checkbox" name="category" value="snack"> Snack</label>
-        <label class="filter_check"><input type="checkbox" name="category" value="dessert"> Dessert</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="breakfast"{% if 'breakfast' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍳 Breakfast</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="lunch"{% if 'lunch' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍽️ Lunch</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="dinner"{% if 'dinner' in request.GET.getlist('meal_type') %}checked{% endif %}> 🌙 Dinner</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="snack"{% if 'snack' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍿 Snack</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="dessert"{% if 'dessert' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍰 Dessert</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="drinks" {% if 'drinks' in request.GET.getlist('meal_type') %}checked{% endif %}> 🥤 Drinks</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="other" {% if 'other' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍽️ Other</label>
       </div>
     </div>
-  -->
     
     <div class="filter_group">
       <label class="filter_label">Budget</label>
       <div class="filter_options">
-        <label class="filter_check"><input type="checkbox" name="budget" value="low"> Below RM5</label>
-        <label class="filter_check"><input type="checkbox" name="budget" value="medium"> RM5–RM15</label>
-        <label class="filter_check"><input type="checkbox" name="budget" value="high"> Above RM15</label>
+        <label class="filter_check"><input type="checkbox" name="budget" value="low" {% if 'low' in request.GET.getlist('budget') %}checked{% endif %}> Below RM5</label>
+        <label class="filter_check"><input type="checkbox" name="budget" value="medium" {% if 'medium' in request.GET.getlist('budget') %}checked{% endif %}> RM5–RM15</label>
+        <label class="filter_check"><input type="checkbox" name="budget" value="high" {% if 'high' in request.GET.getlist('budget') %}checked{% endif %}> Above RM15</label>
       </div>
     </div>
 
     <div class="filter_group">
       <label class="filter_label">Dietary</label>
       <div class="filter_options">
-        <label class="filter_check"><input type="radio" name="halal" value="" checked> All</label>
-        <label class="filter_check"><input type="radio" name="halal" value="true"> Halal Only</label>
-        <label class="filter_check"><input type="radio" name="halal" value="false"> Non-Halal Only</label>
+        <label class="filter_check"><input type="radio" name="halal" value="" {% if not request.GET.halal %}checked{% endif %}> All</label>
+        <label class="filter_check"><input type="radio" name="halal" value="true" {% if request.GET.halal == "true" %}checked{% endif %}> Halal Only</label>
+        <label class="filter_check"><input type="radio" name="halal" value="false" {% if request.GET.halal == "false" %}checked{% endif %}> Non-Halal Only</label>
       </div>
     </div>
 
@@ -122,7 +123,7 @@
     <div class="recipe_cards">
 
       {% for recipe in recipes %}
-        <article class="card">
+        <article class="card" onclick="window.location.href='{% url 'recipe_detail' recipe.id %}'" style="cursor:pointer;">
           <div class="card_body">
 
             <!-- recipe.name → name field from Recipe table -->
@@ -137,10 +138,9 @@
               {% else %}
                 <span class="recipe_nonhalal">❌ Non-Halal</span>
               {% endif %}
+              <span class="recipe_meal_type">📂 {{ recipe.get_meal_type_display }}</span>
+              <span class="recipe_budget">💰 {{ recipe.get_budget_display }}</span>
             </div>
-
-            <a href="{% url 'recipe_detail' recipe.id %}" class="recipe_link">View Recipe →</a>
-
           </div>
         </article>
       {% empty %}

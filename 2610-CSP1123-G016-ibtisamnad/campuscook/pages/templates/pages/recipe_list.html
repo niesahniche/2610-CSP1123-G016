@@ -45,7 +45,7 @@
     <section class="recipe_cards">
 
         {% for item in recipes %}
-            <article class="card" onclick="window.location.href='{% url 'recipe_detail' item.recipe.id %}'" style="cursor:pointer;">
+            <article class="card" id="card-{{ item.recipe.id }}" onclick="window.location.href='{% url 'recipe_detail' item.recipe.id %}'" style="cursor:pointer;">
 
                 <!-- recipe.name → name field from Recipe table -->
                 <h2>{{ item.recipe.name }}</h2>

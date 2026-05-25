@@ -1,3 +1,5 @@
+from urllib import request
+
 from django.shortcuts import redirect, render, get_object_or_404
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -153,6 +155,11 @@ def recipe_list(request):
     paginator = Paginator(recipes, 6)
     recipes_page = paginator.get_page(request.GET.get('page'))
 
+    # ADD after ingredient_search_q block:
+    meal_types = request.GET.getlist('meal_type')
+    if meal_types:
+        recipes = recipes.filter(meal_type__in=meal_types)
+
     if request.user.is_authenticated:
         fav_ids = set(
             FavouriteRecipe.objects.filter(user=request.user)
@@ -211,6 +218,10 @@ def recipe_filter(request):
     budgets = request.GET.getlist('budget')
     if budgets:
         recipes = recipes.filter(budget__in=budgets)
+
+    meal_types = request.GET.getlist('meal_type')
+    if meal_types:
+        recipes = recipes.filter(meal_type__in=meal_types)
 
     return render(request, 'pages/recipe_filter.html', {'recipes': recipes})
 
@@ -300,6 +311,17 @@ def add_recipe(request):
         'all_ingredients': all_ingredients,
     })
 
+# ── Delete recipe API ─────────────────────────────────────────────────────────
+@csrf_exempt
+@require_http_methods(['DELETE'])
+def delete_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    # only the recipe creator can delete it
+    if request.user.is_authenticated and recipe.user == request.user:
+        recipe.delete()
+        return JsonResponse({'deleted': True})
+    return JsonResponse({'error': 'Not allowed'}, status=403)
+
 # ── To Make API ───────────────────────────────────────────────────────────────
 # Called when user clicks "To Make" on a recipe card.
 # Checks which recipe ingredients the user already has (available in grocery)
@@ -314,15 +336,16 @@ def to_make(request, recipe_id):
  
     # Get ingredient names user has available in their grocery list
     my_available_names = set(
+        n.lower() for n in
         Grocery.objects.filter(user=user, status='available')
         .values_list('name', flat=True)
     )
     
     # available → recipe ingredients the user already has in their grocery list
-    available = recipe_ingredients.filter(name__in=my_available_names)
+    available = [ing for ing in recipe_ingredients if ing.name.lower() in my_available_names]
  
     # missing → recipe ingredients NOT in user's available grocery list
-    missing = recipe_ingredients.exclude(name__in=my_available_names)
+    missing = [ing for ing in recipe_ingredients if ing.name.lower() not in my_available_names]
  
     # auto-add missing ingredients to Grocery table with status='missing'
     # skip if already added as missing for this recipe to avoid duplicates
@@ -354,21 +377,6 @@ def to_make(request, recipe_id):
 # ── Favourite recipes page ────────────────────────────────────────────────────────
 def favourite_recipes(request):
     return render(request, 'pages/favourite_recipes.html')
-
-@require_http_methods(['GET'])
-def favourite_recipe_list(request):
-    user = request.user if request.user.is_authenticated else AppUser.objects.first()
-    favs = FavouriteRecipe.objects.select_related('recipe').filter(user=user)
-    data = [
-        {
-            'fav_id':    f.id,
-            'recipe_id': f.recipe.id,
-            'title':     f.recipe.name,
-            'image_url': f.recipe.image_url or '',
-        }
-        for f in favs
-    ]
-    return JsonResponse(data, safe=False)
 
 # ── Favourite list API — returns JSON list of user's favourites ───────────────
 @require_http_methods(['GET'])
@@ -419,14 +427,15 @@ def check_ingredients(request, recipe_id):
     
     # Get ingredient names user has available in their grocery list
     my_available = set(
+        n.lower() for n in
         Grocery.objects.filter(user=user, status='available')
-        .values_list('name', flat=True)
+        .values_list('name__lower', flat=True)
     )
  
     available = [ing.name for ing in recipe_ingredients 
-                 if my_available.filter(name__iexact=ing.name).exists()]
+                 if ing.name.lower() in my_available]
     missing   = [ing.name for ing in recipe_ingredients 
-                 if not my_available.filter(name__iexact=ing.name).exists()]
+                 if ing.name.lower() not in my_available]
  
     return JsonResponse({
         'recipe':    recipe.name,
@@ -450,15 +459,16 @@ def add_ingredients_to_grocery(request, recipe_id):
     
     # Get ingredient names user has available in their grocery list
     my_available = set(
+        n.lower() for n in
         Grocery.objects.filter(user=user, status='available')
-        .values_list('name', flat=True)
+        .values_list('name__lower', flat=True)
     )
     
     added_available = []
     added_missing   = []
  
     for ing in recipe_ingredients:
-        if ing.name in my_available:
+        if ing.name.lower() in my_available:
             # user already has this
             added_available.append(ing.name)
         else:

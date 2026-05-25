@@ -36,16 +36,22 @@
                     {% endif %}
                     {% if user.is_authenticated %}
                     <button class="btn_action btn_fav {% if is_fav %}btn_fav_active{% endif %}" 
-                    data-recipe-id="{{ recipe.id }}" 
-                    data-fav="{% if is_fav %}true{% else %}false{% endif %}" 
-                    onclick="toggleFav(this)">
+                        data-recipe-id="{{ recipe.id }}" 
+                        data-fav="{% if is_fav %}true{% else %}false{% endif %}" 
+                        onclick="toggleFav(this)">
                         {% if is_fav %}♥ Favourited{% else %}♡ Favourite{% endif %}
                     </button>
                     {% endif %}
                     <button class="btn_action btn_share" 
-                    data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' recipe.id %}" 
-                    onclick="shareRecipe(this)">🔗 Share
+                        data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' recipe.id %}" 
+                        onclick="shareRecipe(this)">🔗 Share
                     </button>
+                    {% if user.is_authenticated and recipe.user == user %}
+                    <button class="btn_action btn_delete"
+                        onclick="deleteRecipe({{ recipe.id }})">
+                        🗑 Delete
+                    </button>
+                    {% endif %}
                 </div>
             </div>
 
@@ -77,6 +83,8 @@
                 {% else %}
                     <span class="recipe_nonhalal">❌ Non-Halal</span>
                 {% endif %}
+
+                <span class="recipe_meal_type">📂 {{ recipe.get_meal_type_display }}</span>
 
             <!-- RECIPE CREATOR & RATING ────────────────────────────────────
                  recipe.user.username → creator name
@@ -559,6 +567,22 @@
             showToast('Could not post comment. Try again.', 'error');
         }
     }
+
+    // ── Delete Recipe ─────────────────────────────────────────────────────────
+    
+    async function deleteRecipe(recipeId) {
+    if (!confirm('Delete this recipe permanently?')) return;
+    try {
+        const res = await fetch(`/api/delete-recipe/${recipeId}/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (!res.ok) throw new Error();
+        window.location.href = '/recipes/';
+    } catch {
+        showToast('Could not delete. Try again.', 'error');
+    }
+}
 </script>
 
 {% endblock %}

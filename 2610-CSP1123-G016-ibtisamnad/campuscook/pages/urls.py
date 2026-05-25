@@ -21,8 +21,9 @@ urlpatterns = [
     path("recipes-detail/<int:id>/", views.recipe_detail, name="recipe_detail"),
     path("filter/",                  views.recipe_filter, name="recipe_filter"),
 
-    # ── Add recipe — requires login ───────────────────────────────────────────
+    # ── Add and delete recipe — requires login ───────────────────────────────────────────
     path("recipes/add/", views.add_recipe, name="add_recipe"),
+    path("api/delete-recipe/<int:recipe_id>/", views.delete_recipe, name="delete_recipe"),
 
     # ── To Make — checks ingredients, adds missing to Grocery table ───────────
     path("api/to-make/<int:recipe_id>/", views.to_make, name="to_make"),

@@ -18,21 +18,14 @@
             name="search"
             class="search_input"
             placeholder="Search recipes..."
-            value="{{ request.GET.search }}"
-        >
-        <button type="submit" class="search_btn">Search</button>
-    </form>
-
-    <!-- Ingredient search -->
-    <form action="{% url 'recipe_list' %}" method="GET" class="search_form">
-        <input
-            type="text"
-            name="ingredient"
+            value="{{ request.GET.search }}">
+        <input 
+            type="text" 
+            name="ingredient" 
             class="search_input"
-            placeholder="Search by ingredient..."
-            value="{{ request.GET.ingredient }}"
-        >
-        <button type="submit" class="search_btn">🔍</button>
+            placeholder="Search by ingredient..." 
+            value="{{ request.GET.ingredient }}">
+        <button type="submit" class="search_btn">Search</button>
     </form>
 
     <!-- FILTER LINK ─────────────────────────────────────────────────────
@@ -52,7 +45,7 @@
     <section class="recipe_cards">
 
         {% for item in recipes %}
-            <article class="card">
+            <article class="card" onclick="window.location.href='{% url 'recipe_detail' item.recipe.id %}'" style="cursor:pointer;">
 
                 <!-- recipe.name → name field from Recipe table -->
                 <h2>{{ item.recipe.name }}</h2>
@@ -82,10 +75,11 @@
                 </div>
 
                 <!-- cooking_time and appliance → fields from Recipe table -->
-                <p class="card_meta">⏱ {{ recipe.cooking_time }} mins | 🔧 {{ recipe.appliance }}</p>
+                <p class="card_meta">⏱ {{ item.recipe.cooking_time }} mins | 🔧 {{ item.recipe.appliance }}</p>
                 <p class="card_tags">
-                    💰 {{ recipe.get_budget_display }}
-                    {% if recipe.is_halal %}✅ Halal{% else %}❌ Non-Halal{% endif %}
+                    📂 {{ item.recipe.get_meal_type_display }}
+                    💰 {{ item.recipe.get_budget_display }}
+                    {% if item.recipe.is_halal %}✅ Halal{% else %}❌ Non-Halal{% endif %}
                 </p>
                 
                 <!-- Favourite BUTTON ──────────────────────────────────────────────
@@ -99,21 +93,28 @@
 
                     {% if user.is_authenticated %}
                     <button class="btn_action btn_fav {% if item.recipe.id in fav_ids %}btn_fav_active{% endif %}"
-                    data-recipe-id="{{ item.recipe.id }}" 
-                    data-fav="{% if item.recipe.id in fav_ids %}true{% else %}false{% endif %}"
-                    onclick="toggleFav(this)"
-                    title="{% if item.recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
+                        data-recipe-id="{{ item.recipe.id }}" 
+                        data-fav="{% if item.recipe.id in fav_ids %}true{% else %}false{% endif %}"
+                        onclick="toggleFav(this)"
+                        title="{% if item.recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
                     >
                     {% if item.recipe.id in fav_ids %}♥ Favourited{% else %}♡ Favourite{% endif %}
                     </button>
                     {% endif %}
 
-                    <button class="btn_action btn_share" data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' item.recipe.id %}" onclick="shareRecipe(this)">🔗 Share</button>
-                </div>
+                    <button class="btn_action btn_share" 
+                        data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' item.recipe.id %}" 
+                        onclick="shareRecipe(this)">🔗 Share</button>
+                        📂 {{ item.recipe.get_meal_type_display }}
 
-                <a href="{% url 'recipe_detail' item.recipe.id %}" class="recipe_link">
-                    View Recipe →
-                </a>
+                    {% if user.is_authenticated and item.recipe.user == user %}
+                    <button class="btn_action btn_delete"
+                        onclick="event.stopPropagation(); deleteRecipe({{ item.recipe.id }}, this)">
+                        🗑 Delete
+                    </button>
+                    {% endif %}
+
+                </div>
 
             </article>
         {% empty %}
@@ -147,45 +148,55 @@
 </main>
 
 <style>
-  .card_actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0 0.4rem; }
-  .btn_action { padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; border-radius: 6px; border: 1.5px solid; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; white-space: nowrap; }
-  .btn_check  { background: #f0faf4; color: #2d6a4f; border-color: #6ac383; }
-  .btn_check:hover { background: #6ac383; color: #fff; }
-  .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
-  .btn_tomake:hover { background: #e6a817; color: #fff; }
-  .btn_fav   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
-  .btn_fav:hover { background: #9b72d4; color: #fff; }
-  .btn_favourited  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
-  .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
-  .btn_share:hover { background: #6488d4; color: #fff; }
-  .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
-  .popup-overlay.open { display: block; }
-  .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border-radius: 16px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-  .popup.open { display: block; }
-  .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
-  .popup-icon  { font-size: 2.5rem; text-align: center; margin-bottom: 0.8rem; }
-  .popup-title { font-size: 1.2rem; font-weight: 800; color: #2c2520; margin-bottom: 0.5rem; text-align: center; }
-  .popup-msg   { font-size: 0.88rem; color: #666; text-align: center; margin-bottom: 1.2rem; }
-  .ingredient-section { margin-bottom: 1rem; }
-  .ingredient-section h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
-  .ingredient-section.available h4 { color: #2d6a4f; }
-  .ingredient-section.missing  h4  { color: #b85c38; }
-  .ingredient-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
-  .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
-  .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
-  .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
-  .popup-btn { display: block; width: 100%; padding: 0.75rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s; }
-  .popup-btn:hover { background: #6ac383; }
-  .popup-btn.secondary { background: #fff; color: #555; border: 1.5px solid #ddd; margin-top: 0.4rem; }
-  .popup-btn.secondary:hover { border-color: #6ac383; color: #2d6a4f; }
-  .toast { position: fixed; bottom: 28px; right: 28px; background: #2c2520; color: #fff; padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
-  .toast.show { opacity: 1; transform: none; }
-  .toast.success { background: #2d6a4f; }
-  .toast.error   { background: #b85c38; }
-  .recipe_meta { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0.5rem 0 0.8rem; font-size: 0.85rem; flex-wrap: wrap; }
-  .recipe_creator { color: #666; font-weight: 500; }
-  .recipe_rating { font-weight: 700; color: #8a5a00; }
-  .rating_count { color: #999; font-weight: normal; font-size: 0.8rem; }
+    .card_actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0 0.4rem; }
+    /* earthy-green card styling */
+    .card { background: #faf6f0; border: 1.5px solid #d9ccb8; border-radius: 12px;
+        padding: 1.2rem; transition: box-shadow 0.2s, transform 0.15s; }
+    .card:hover { box-shadow: 0 6px 20px rgba(44,37,32,0.1); transform: translateY(-2px); }
+    .card h2 { color: #2c2520; font-size: 1.05rem; margin-bottom: 0.4rem; }
+    .card_meta { color: #7a6a5a; font-size: 0.82rem; }
+    .card_tags { font-size: 0.78rem; color: #5c6b3a; margin: 0.3rem 0 0.6rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn_action { padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; border-radius: 6px; border: 1.5px solid; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+    .btn_check  { background: #f0faf4; color: #2d6a4f; border-color: #6ac383; }
+    .btn_check:hover { background: #6ac383; color: #fff; }
+    .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
+    .btn_tomake:hover { background: #e6a817; color: #fff; }
+    .btn_fav   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
+    .btn_fav:hover { background: #9b72d4; color: #fff; }
+    .btn_favourited  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
+    .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
+    .btn_share:hover { background: #6488d4; color: #fff; }
+    .btn_delete { background: #fff5f5; color: #b85c38; border-color: #f0b4ae; }
+    .btn_delete:hover { background: #b85c38; color: #fff; }
+    .btn_fav_active { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; }
+    .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
+    .popup-overlay.open { display: block; }
+    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border-radius: 16px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .popup.open { display: block; }
+    .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
+    .popup-icon  { font-size: 2.5rem; text-align: center; margin-bottom: 0.8rem; }
+    .popup-title { font-size: 1.2rem; font-weight: 800; color: #2c2520; margin-bottom: 0.5rem; text-align: center; }
+    .popup-msg   { font-size: 0.88rem; color: #666; text-align: center; margin-bottom: 1.2rem; }
+    .ingredient-section { margin-bottom: 1rem; }
+    .ingredient-section h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .ingredient-section.available h4 { color: #2d6a4f; }
+    .ingredient-section.missing  h4  { color: #b85c38; }
+    .ingredient-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+    .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
+    .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
+    .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
+    .popup-btn { display: block; width: 100%; padding: 0.75rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s; }
+    .popup-btn:hover { background: #6ac383; }
+    .popup-btn.secondary { background: #fff; color: #555; border: 1.5px solid #ddd; margin-top: 0.4rem; }
+    .popup-btn.secondary:hover { border-color: #6ac383; color: #2d6a4f; }
+    .toast { position: fixed; bottom: 28px; right: 28px; background: #2c2520; color: #fff; padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
+    .toast.show { opacity: 1; transform: none; }
+    .toast.success { background: #2d6a4f; }
+    .toast.error   { background: #b85c38; }
+    .recipe_meta { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 0.5rem 0 0.8rem; font-size: 0.85rem; flex-wrap: wrap; }
+    .recipe_creator { color: #666; font-weight: 500; }
+    .recipe_rating { font-weight: 700; color: #8a5a00; }
+    .rating_count { color: #999; font-weight: normal; font-size: 0.8rem; }
 </style>
 
 <!-- Favourite RECIPE SCRIPT ───────────────────────────────────────────────────────
@@ -274,6 +285,22 @@
     } finally {
         btn.disabled = false;
         btn.textContent = '🍳 To Make';
+    }
+}
+
+async function deleteRecipe(recipeId, btn) {
+    if (!confirm('Delete this recipe permanently?')) return;
+    event.stopPropagation();
+    try {
+        const res = await fetch(`/api/delete-recipe/${recipeId}/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (!res.ok) throw new Error();
+        document.getElementById(`card-${recipeId}`).remove();
+        showToast('Recipe deleted.', 'success');
+    } catch {
+        showToast('Could not delete. Try again.', 'error');
     }
 }
 

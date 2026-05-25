@@ -76,7 +76,21 @@
                 <option value="medium" {% if form.budget.value == 'medium' %}selected{% endif %}>RM5 – RM15</option>
                 <option value="high"   {% if form.budget.value == 'high'   %}selected{% endif %}>Above RM15</option>
             </select>
-        </div>       
+        </div>
+        
+        <!-- MEAL TYPE — Recipe.meal_type (CharField with choices) -->
+        <div class="form_group">
+            <label for="id_meal_type">Meal Type</label>
+            <select id="id_meal_type" name="meal_type">
+                <option value="breakfast" {% if form.meal_type.value == 'breakfast' %}selected{% endif %}>🌅 Breakfast</option>
+                <option value="lunch"     {% if form.meal_type.value == 'lunch'     %}selected{% endif %}>☀️ Lunch</option>
+                <option value="dinner"    {% if form.meal_type.value == 'dinner'    %}selected{% endif %}>🌙 Dinner</option>
+                <option value="snack"     {% if form.meal_type.value == 'snack'     %}selected{% endif %}>🍿 Snack</option>
+                <option value="dessert"   {% if form.meal_type.value == 'dessert'   %}selected{% endif %}>🍰 Dessert</option>
+                <option value="drinks"    {% if form.meal_type.value == 'drinks'    %}selected{% endif %}>🥤 Drinks</option>
+                <option value="other"     {% if form.meal_type.value == 'other'     %}selected{% endif %}>🍽️ Other</option>
+            </select>
+        </div>
 
         <!-- COOKING TIME ────────────────────────────────────────────────────
              maps to Recipe.cooking_time (IntegerField) in models.py        -->

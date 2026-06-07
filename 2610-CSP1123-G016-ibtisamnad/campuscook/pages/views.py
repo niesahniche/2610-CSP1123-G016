@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from .forms import AppUserCreationForm, RecipeForm
 import json
 
@@ -57,6 +57,24 @@ def home(request):
 # ── About ─────────────────────────────────────────────────────────────────────
 def about(request):
     return render(request, "pages/about.html")
+
+
+def popular(request):
+    recipes = (
+        Recipe.objects.annotate(favourite_count=Count('favourited_by'))
+        .filter(favourite_count__gt=0)
+        .order_by('-favourite_count', 'name')[:10]
+    )
+    popular_recipes = list(recipes)
+    top_three = popular_recipes[:3]
+    remaining = popular_recipes[3:]
+    max_favourites = popular_recipes[0].favourite_count if popular_recipes else 0
+
+    return render(request, "pages/popular.html", {
+        "top_three": top_three,
+        "remaining": remaining,
+        "max_favourites": max_favourites,
+    })
 
 # ── Ingredient search API ─────────────────────────────────────────────────────
 # GET /api/ingredients/?q=chicken

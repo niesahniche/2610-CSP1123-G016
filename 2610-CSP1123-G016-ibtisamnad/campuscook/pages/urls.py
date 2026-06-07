@@ -6,6 +6,7 @@ urlpatterns = [
     # ── Main pages ────────────────────────────────────────────────────────────
     path("",       views.home,  name="home"),
     path("about/", views.about, name="about"),
+    path("popular/", views.popular, name="popular"),
 
     # ── Grocery ───────────────────────────────────────────────────────────────
     path("grocery/",          views.grocery,     name="grocery"),

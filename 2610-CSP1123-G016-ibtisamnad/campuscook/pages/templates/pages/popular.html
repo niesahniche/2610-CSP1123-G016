@@ -1,0 +1,341 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<div class="popular_banner"></div>
+
+<main class="popular_page">
+    <section class="popular_header">
+        <p class="popular_kicker">Most favourited by all users</p>
+        <h1>Popular Recipes</h1>
+        <p class="popular_intro">The top 10 recipes saved most often across Campus Cook.</p>
+    </section>
+
+    {% if top_three %}
+        <section class="podium" aria-label="Top 3 popular recipes">
+            {% if top_three.1 %}
+                <article class="podium_card second">
+                    <div class="podium_rank">#2</div>
+                    <a href="{% url 'recipe_detail' top_three.1.id %}" class="podium_recipe_box">
+                        {{ top_three.1.name }}
+                    </a>
+                    <p>{{ top_three.1.favourite_count }} favourite{{ top_three.1.favourite_count|pluralize }}</p>
+                    <div class="podium_block">2</div>
+                </article>
+            {% endif %}
+
+            <article class="podium_card first">
+                <div class="podium_rank">#1</div>
+                <a href="{% url 'recipe_detail' top_three.0.id %}" class="podium_recipe_box">
+                    {{ top_three.0.name }}
+                </a>
+                <p>{{ top_three.0.favourite_count }} favourite{{ top_three.0.favourite_count|pluralize }}</p>
+                <div class="podium_block">1</div>
+            </article>
+
+            {% if top_three.2 %}
+                <article class="podium_card third">
+                    <div class="podium_rank">#3</div>
+                    <a href="{% url 'recipe_detail' top_three.2.id %}" class="podium_recipe_box">
+                        {{ top_three.2.name }}
+                    </a>
+                    <p>{{ top_three.2.favourite_count }} favourite{{ top_three.2.favourite_count|pluralize }}</p>
+                    <div class="podium_block">3</div>
+                </article>
+            {% endif %}
+        </section>
+
+        {% if remaining %}
+            <section class="popular_bars" aria-label="Popular recipes ranked 4 to 10">
+                {% for recipe in remaining %}
+                    <article class="popular_bar_item">
+                        <div class="bar_rank">#{{ forloop.counter|add:3 }}</div>
+                        <a href="{% url 'recipe_detail' recipe.id %}" class="bar_name">{{ recipe.name }}</a>
+                        <div class="bar_track">
+                            <div class="bar_fill" style="width: {% widthratio recipe.favourite_count max_favourites 100 %}%"></div>
+                        </div>
+                        <div class="bar_count">{{ recipe.favourite_count }}</div>
+                    </article>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% else %}
+        <section class="popular_empty">
+            <h2>No popular recipes yet</h2>
+            <p>Favourite some recipes and they will appear here.</p>
+            <a href="{% url 'recipe_list' %}">Browse recipes</a>
+        </section>
+    {% endif %}
+</main>
+
+<style>
+    .popular_banner {
+        background: #006400;
+        height: 160px;
+        width: 100%;
+    }
+
+    .popular_page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.6rem 2rem 4rem;
+        color: #111;
+    }
+
+    .popular_header {
+        padding-bottom: 1.2rem;
+        margin-bottom: 1.6rem;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .popular_kicker {
+        margin: 0 0 0.4rem;
+        color: #7c5cbf;
+        font-size: 0.82rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .popular_header h1 {
+        margin: 0;
+        color: #111;
+        font-size: 1.5rem;
+        font-weight: 800;
+    }
+
+    .popular_intro {
+        margin: 0.45rem 0 0;
+        max-width: 560px;
+        color: #888;
+        line-height: 1.5;
+        font-size: 0.9rem;
+    }
+
+    .podium {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: end;
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+
+    .podium_card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .podium_card.first {
+        order: 2;
+    }
+
+    .podium_card.second {
+        order: 1;
+    }
+
+    .podium_card.third {
+        order: 3;
+    }
+
+    .podium_rank {
+        margin-bottom: 0.6rem;
+        padding: 0.35rem 0.7rem;
+        border-radius: 8px;
+        background: #fff;
+        color: #333;
+        font-size: 0.82rem;
+        font-weight: 800;
+        border: 2px solid #333;
+    }
+
+    .podium_recipe_box {
+        width: 100%;
+        max-width: 230px;
+        aspect-ratio: 4 / 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        border: 2px solid #333;
+        border-radius: 12px;
+        background: #fff;
+        color: #333;
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1.35;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+        transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .podium_recipe_box:hover {
+        box-shadow: 4px 4px 0 #6ac383;
+        transform: translateY(-3px);
+    }
+
+    .podium_card.first .podium_recipe_box {
+        max-width: 280px;
+        font-size: 1.08rem;
+    }
+
+    .podium_card p {
+        margin: 0.85rem 0 0.8rem;
+        color: #555;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .podium_block {
+        width: 100%;
+        border: 2px solid #333;
+        border-bottom: 0;
+        border-radius: 12px 12px 0 0;
+        background: #96D4AA;
+        color: #fff;
+        font-size: 2rem;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .first .podium_block {
+        height: 150px;
+        background: #006400;
+    }
+
+    .second .podium_block {
+        height: 115px;
+        background: #96D4AA;
+    }
+
+    .third .podium_block {
+        height: 90px;
+        background: #7c5cbf;
+    }
+
+    .popular_bars {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-width: 900px;
+        margin: 2.5rem auto 0;
+    }
+
+    .popular_bar_item {
+        display: grid;
+        grid-template-columns: 48px minmax(120px, 1fr) minmax(120px, 2fr) 44px;
+        align-items: center;
+        gap: 0.85rem;
+        padding: 0.85rem 1rem;
+        border: 2px solid #333;
+        border-radius: 12px;
+        background: #fff;
+        transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .popular_bar_item:hover {
+        box-shadow: 4px 4px 0 #6ac383;
+        transform: translateY(-2px);
+    }
+
+    .bar_rank {
+        font-weight: 900;
+        color: #7c5cbf;
+    }
+
+    .bar_name {
+        color: #2c2520;
+        font-weight: 800;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+    }
+
+    .bar_name:hover {
+        color: #2d6a4f;
+    }
+
+    .bar_track {
+        height: 14px;
+        border-radius: 999px;
+        background: #eee;
+        overflow: hidden;
+    }
+
+    .bar_fill {
+        height: 100%;
+        min-width: 8px;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #96D4AA, #006400);
+    }
+
+    .bar_count {
+        text-align: right;
+        font-weight: 900;
+        color: #555;
+    }
+
+    .popular_empty {
+        max-width: 520px;
+        margin: 3rem auto;
+        padding: 2rem;
+        border: 2px solid #333;
+        border-radius: 12px;
+        text-align: center;
+        background: #fff;
+    }
+
+    .popular_empty h2 {
+        margin-top: 0;
+    }
+
+    .popular_empty a {
+        display: inline-block;
+        margin-top: 0.7rem;
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        background: #96D4AA;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 800;
+        transition: background 0.2s;
+    }
+
+    .popular_empty a:hover {
+        background: #6ac383;
+    }
+
+    @media (max-width: 760px) {
+        .podium {
+            grid-template-columns: 1fr;
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .podium_card.first,
+        .podium_card.second,
+        .podium_card.third {
+            order: initial;
+        }
+
+        .podium_block {
+            height: 72px !important;
+        }
+
+        .popular_bar_item {
+            grid-template-columns: 44px 1fr 40px;
+        }
+
+        .bar_track {
+            grid-column: 2 / 4;
+            width: 100%;
+        }
+    }
+</style>
+
+{% endblock %}

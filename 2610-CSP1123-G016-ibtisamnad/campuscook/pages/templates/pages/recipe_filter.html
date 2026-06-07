@@ -61,12 +61,12 @@
     <div class="filter_group">
       <label class="filter_label">Appliance</label>
       <div class="filter_options">
-        <label class="filter_check"><input type="checkbox" name="appliance" value="none" {% if 'none' in request.GET.getlist('appliance') %}checked{% endif %}> No Appliance</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="microwave" {% if 'microwave' in request.GET.getlist('appliance') %}checked{% endif %}> Microwave</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="oven" {% if 'oven' in request.GET.getlist('appliance') %}checked{% endif %}> Oven</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="stove" {% if 'stove' in request.GET.getlist('appliance') %}checked{% endif %}> Stove</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="airfryer" {% if 'airfryer' in request.GET.getlist('appliance') %}checked{% endif %}> Air Fryer</label>
-        <label class="filter_check"><input type="checkbox" name="appliance" value="blender" {% if 'blender' in request.GET.getlist('appliance') %}checked{% endif %}> Blender</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="none" {% if 'none' in selected_appliances %}checked{% endif %}> No Appliance</label>
+        <label class="filter_check"><input type="checkbox" name="appliance" value="microwave" {% if 'microwave' in selected_appliances %}checked{% endif %}> Microwave</label>
+<label class="filter_check"><input type="checkbox" name="appliance" value="oven" {% if 'oven' in selected_appliances %}checked{% endif %}> Oven</label>
+<label class="filter_check"><input type="checkbox" name="appliance" value="stove" {% if 'stove' in selected_appliances %}checked{% endif %}> Stove</label>
+<label class="filter_check"><input type="checkbox" name="appliance" value="airfryer" {% if 'airfryer' in selected_appliances %}checked{% endif %}> Air Fryer</label>
+<label class="filter_check"><input type="checkbox" name="appliance" value="blender" {% if 'blender' in selected_appliances %}checked{% endif %}> Blender</label>
       </div>
     </div>
 
@@ -77,22 +77,22 @@
     <div class="filter_group">
       <label class="filter_label">Meal Type</label>
       <div class="filter_options">
-        <label class="filter_check"><input type="checkbox" name="meal_type" value="breakfast"{% if 'breakfast' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍳 Breakfast</label>
-        <label class="filter_check"><input type="checkbox" name="meal_type" value="lunch"{% if 'lunch' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍽️ Lunch</label>
-        <label class="filter_check"><input type="checkbox" name="meal_type" value="dinner"{% if 'dinner' in request.GET.getlist('meal_type') %}checked{% endif %}> 🌙 Dinner</label>
-        <label class="filter_check"><input type="checkbox" name="meal_type" value="snack"{% if 'snack' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍿 Snack</label>
-        <label class="filter_check"><input type="checkbox" name="meal_type" value="dessert"{% if 'dessert' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍰 Dessert</label>
-        <label class="filter_check"><input type="checkbox" name="meal_type" value="drinks" {% if 'drinks' in request.GET.getlist('meal_type') %}checked{% endif %}> 🥤 Drinks</label>
-        <label class="filter_check"><input type="checkbox" name="meal_type" value="other" {% if 'other' in request.GET.getlist('meal_type') %}checked{% endif %}> 🍽️ Other</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="breakfast"{% if 'breakfast' in selected_meal_types %}checked{% endif %}> 🍳 Breakfast</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="lunch"{% if 'lunch' in selected_meal_types %}checked{% endif %}> 🍽️ Lunch</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="dinner"{% if 'dinner' in selected_meal_types %}checked{% endif %}> 🌙 Dinner</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="snack"{% if 'snack' in selected_meal_types %}checked{% endif %}> 🍿 Snack</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="dessert"{% if 'dessert' in selected_meal_types %}checked{% endif %}> 🍰 Dessert</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="drinks" {% if 'drinks' in selected_meal_types %}checked{% endif %}> 🥤 Drinks</label>
+        <label class="filter_check"><input type="checkbox" name="meal_type" value="other" {% if 'other' in selected_meal_types %}checked{% endif %}> 🍽️ Other</label>
       </div>
     </div>
     
     <div class="filter_group">
       <label class="filter_label">Budget</label>
       <div class="filter_options">
-        <label class="filter_check"><input type="checkbox" name="budget" value="low" {% if 'low' in request.GET.getlist('budget') %}checked{% endif %}> Below RM5</label>
-        <label class="filter_check"><input type="checkbox" name="budget" value="medium" {% if 'medium' in request.GET.getlist('budget') %}checked{% endif %}> RM5–RM15</label>
-        <label class="filter_check"><input type="checkbox" name="budget" value="high" {% if 'high' in request.GET.getlist('budget') %}checked{% endif %}> Above RM15</label>
+        <label class="filter_check"><input type="checkbox" name="budget" value="low" {% if 'low' in selected_budgets %}checked{% endif %}> Below RM5</label>
+        <label class="filter_check"><input type="checkbox" name="budget" value="medium" {% if 'medium' in selected_budgets %}checked{% endif %}> RM5–RM15</label>
+        <label class="filter_check"><input type="checkbox" name="budget" value="high" {% if 'high' in selected_budgets %}checked{% endif %}> Above RM15</label>
       </div>
     </div>
 
@@ -103,6 +103,18 @@
         <label class="filter_check"><input type="radio" name="halal" value="true" {% if request.GET.halal == "true" %}checked{% endif %}> Halal Only</label>
         <label class="filter_check"><input type="radio" name="halal" value="false" {% if request.GET.halal == "false" %}checked{% endif %}> Non-Halal Only</label>
       </div>
+    </div>
+
+    <div class="filter_group">
+      <label class="filter_label">Minimum Rating</label>
+      <div class="filter_options">
+        <label class="filter_check"><input type="radio" name="min_rating" value="" {% if not request.GET.min_rating %}checked{% endif %}> Any</label>
+        <label class="filter_check"><input type="radio" name="min_rating" value="1" {% if request.GET.min_rating == '1' %}checked{% endif %}> ⭐ 1+</label>
+        <label class="filter_check"><input type="radio" name="min_rating" value="2" {% if request.GET.min_rating == '2' %}checked{% endif %}> ⭐⭐ 2+</label>
+        <label class="filter_check"><input type="radio" name="min_rating" value="3" {% if request.GET.min_rating == '3' %}checked{% endif %}> ⭐⭐⭐ 3+</label>
+        <label class="filter_check"><input type="radio" name="min_rating" value="4" {% if request.GET.min_rating == '4' %}checked{% endif %}> ⭐⭐⭐⭐ 4+</label>
+        <label class="filter_check"><input type="radio" name="min_rating" value="5" {% if request.GET.min_rating == '5' %}checked{% endif %}> ⭐⭐⭐⭐⭐ 5</label>
+        </div>
     </div>
 
     <div class="filter_buttons">
@@ -139,7 +151,6 @@
                 <span class="recipe_nonhalal">❌ Non-Halal</span>
               {% endif %}
               <span class="recipe_meal_type">📂 {{ recipe.get_meal_type_display }}</span>
-              <span class="recipe_budget">💰 {{ recipe.get_budget_display }}</span>
             </div>
           </div>
         </article>
@@ -149,7 +160,74 @@
 
     </div>
   </section>
-
 </main>
+
+<style>
+  .recipe_filter { max-width: 960px; margin: 2rem auto; padding: 0 1.5rem 4rem; display: grid; grid-template-columns: 280px 1fr; gap: 2rem; align-items: start; }
+  @media (max-width: 700px) { .recipe_filter { grid-template-columns: 1fr; } }
+
+  .filter_form {
+    background: #fff; border: 1.5px solid var(--tan); border-radius: 14px;
+    padding: 1.4rem; position: sticky; top: 1rem;
+    box-shadow: 0 2px 10px rgba(44,37,32,0.07);
+  }
+
+  .filter_group { margin-bottom: 1.2rem; }
+  .filter_label {
+    display: block; font-size: 0.75rem; font-weight: 700; color: var(--olive);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;
+  }
+  .filter_input {
+    width: 100%; padding: 0.55rem 0.8rem;
+    border: 1.5px solid var(--tan); border-radius: 7px;
+    font-size: 0.88rem; color: var(--brown); outline: none;
+    background: var(--cream); transition: border-color 0.2s;
+  }
+  .filter_input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(106,195,131,0.12); }
+
+  .filter_options { display: flex; flex-direction: column; gap: 0.35rem; }
+  .filter_check {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.88rem; color: var(--brown); cursor: pointer;
+  }
+  .filter_check input[type="radio"],
+  .filter_check input[type="checkbox"] { accent-color: var(--green-dark); width: 14px; height: 14px; }
+
+  .filter_buttons { display: flex; gap: 0.6rem; margin-top: 1.2rem; flex-wrap: wrap; }
+  .btn_apply {
+    flex: 1; padding: 0.7rem 1rem;
+    background: var(--green-dark); color: #fff;
+    border: none; border-radius: 8px; font-size: 0.9rem;
+    font-weight: 700; cursor: pointer; transition: background 0.2s;
+  }
+  .btn_apply:hover { background: var(--green); }
+  .btn_clear {
+    padding: 0.7rem 1rem;
+    background: #fff; color: #666;
+    border: 1.5px solid var(--tan); border-radius: 8px;
+    font-size: 0.88rem; text-decoration: none; transition: border-color 0.2s;
+  }
+  .btn_clear:hover { border-color: var(--red-soft); color: var(--red-soft); }
+
+  .filter_results {}
+  .results_title {
+    font-size: 1.2rem; font-weight: 800; color: var(--brown);
+    margin-bottom: 1.2rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--tan);
+  }
+  .recipe_cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 1rem; }
+
+  .card { background: #fff; border: 1.5px solid var(--tan); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(44,37,32,0.06); transition: box-shadow 0.2s, transform 0.15s; cursor: pointer; }
+  .card:hover { box-shadow: 0 6px 20px rgba(44,37,32,0.12); transform: translateY(-2px); }
+  .card_body { padding: 1rem; }
+  .card_title { font-size: 1rem; font-weight: 700; color: var(--brown); margin-bottom: 0.6rem; }
+  .card_tags { display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.76rem; }
+  .card_tags span {
+    background: var(--cream); border: 1px solid var(--tan);
+    border-radius: 20px; padding: 0.2rem 0.6rem; color: var(--olive);
+  }
+  .recipe_halal   { border-color: var(--green) !important; color: var(--green-dark) !important; background: #f0faf4 !important; }
+  .recipe_nonhalal { border-color: #f0b4ae !important; color: var(--red-soft) !important; background: #fff8f5 !important; }
+  .no_results { color: #aaa; font-style: italic; font-size: 0.9rem; grid-column: 1/-1; }
+</style>
 
 {% endblock %}

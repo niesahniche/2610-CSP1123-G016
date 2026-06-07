@@ -66,6 +66,18 @@ class Recipe(models.Model):
         ('medium', 'RM5 – RM15'),
         ('high',   'Above RM15'),
     ]
+
+    MEAL_TYPE_CHOICES = [
+    ('breakfast', 'Breakfast'),
+    ('lunch',     'Lunch'),
+    ('dinner',    'Dinner'),
+    ('snack',     'Snack'),
+    ('dessert',   'Dessert'),
+    ('drinks',    'Drinks'),
+    ('other',     'Other'),
+    ]
+    meal_type = models.CharField(max_length=20, choices=MEAL_TYPE_CHOICES, default='other')
+
     name         = models.CharField(max_length=100)
     # ingredients → ManyToMany to Ingredient table (separate from Grocery)
     ingredients  = models.ManyToManyField(
@@ -93,6 +105,13 @@ class Recipe(models.Model):
  
     def __str__(self):
         return self.name
+    
+    @property
+    def avg_rating(self):
+        ratings = self.ratings.all()
+        if not ratings.exists():
+            return None
+        return round(sum(r.stars for r in ratings) / ratings.count(), 1)
  
  
 class FavouriteRecipe(models.Model):
@@ -149,3 +168,10 @@ class Rating(models.Model):
     
     def __str__(self):
         return f"{self.user.username} rated {self.recipe.name} {self.stars}⭐"
+    
+    @property
+    def avg_rating(self):
+        ratings = self.ratings.all()
+        if not ratings.exists():
+            return None
+        return round(sum(r.stars for r in ratings) / ratings.count(), 1)

@@ -1,5 +1,4 @@
 from urllib import request
-
 from django.shortcuts import redirect, render, get_object_or_404
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -11,7 +10,6 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Avg
 from .forms import AppUserCreationForm, RecipeForm
 import json
-
 from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating
 
 
@@ -195,9 +193,9 @@ def recipe_filter(request):
     if search:
         recipes = recipes.filter(name__icontains=search)
 
-    appliances = request.GET.getlist('appliance')
-    if appliances:
-        recipes = recipes.filter(appliance__in=appliances)
+    selected_appliances = request.GET.getlist('appliance')
+    if selected_appliances:
+        recipes = recipes.filter(appliance__in=selected_appliances)
 
     time = request.GET.get('time', '')
     if time == 'quick':
@@ -215,15 +213,28 @@ def recipe_filter(request):
         recipes = recipes.filter(is_halal=False)
  
     # budget filter — Recipe.budget (CharField with choices)
-    budgets = request.GET.getlist('budget')
-    if budgets:
-        recipes = recipes.filter(budget__in=budgets)
+    selected_budgets = request.GET.getlist('budget')
+    if selected_budgets:
+        recipes = recipes.filter(budget__in=selected_budgets)
 
-    meal_types = request.GET.getlist('meal_type')
-    if meal_types:
+    selected_meal_types = request.GET.getlist('meal_type')
+    if selected_meal_types:
         recipes = recipes.filter(meal_type__in=meal_types)
 
-    return render(request, 'pages/recipe_filter.html', {'recipes': recipes})
+    # min_rating filter — filters recipes whose average rating >= selected value
+    # avg is computed from Rating rows linked to each recipe
+    min_rating = request.GET.get('min_rating', '')
+    if min_rating:
+        from django.db.models import Avg
+        recipes = recipes.annotate(
+            avg_stars=Avg('ratings__stars')
+        ).filter(avg_stars__gte=float(min_rating))
+
+    return render(request, 'pages/recipe_filter.html', {
+        'recipes': recipes,
+        'selected_appliances': request.GET.getlist('appliance'),
+        'selected_budgets':    request.GET.getlist('budget'),
+        'selected_meal_types': request.GET.getlist('meal_type'),})
 
 
 # ── Recipe detail ─────────────────────────────────────────────────────────────
@@ -321,6 +332,73 @@ def delete_recipe(request, recipe_id):
         recipe.delete()
         return JsonResponse({'deleted': True})
     return JsonResponse({'error': 'Not allowed'}, status=403)
+
+# ── Rate recipe API ───────────────────────────────────────────────────────────
+# POST → creates or updates a Rating row
+# Only users who did NOT create the recipe can rate it
+@csrf_exempt
+@require_http_methods(['POST'])
+def rate_recipe(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    user   = request.user if request.user.is_authenticated else None
+
+    if not user:
+        return JsonResponse({'error': 'Login required'}, status=401)
+    if recipe.user == user:
+        return JsonResponse({'error': 'Cannot rate your own recipe'}, status=403)
+
+    body  = json.loads(request.body)
+    stars = int(body.get('stars', 0))
+    if not 1 <= stars <= 5:
+        return JsonResponse({'error': 'Stars must be 1–5'}, status=400)
+
+    rating, created = Rating.objects.update_or_create(
+        user=user, recipe=recipe,
+        defaults={'stars': stars}
+    )
+    return JsonResponse({
+        'stars':      stars,
+        'avg_rating': recipe.avg_rating,
+        'created':    created,
+    })
+
+
+# ── Recommended recipes API ───────────────────────────────────────────────────
+# GET → returns up to 4 recipes matching same meal_type, is_halal, budget
+# excludes the current recipe
+@require_http_methods(['GET'])
+def recommended_recipes(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+
+    recommended = Recipe.objects.filter(
+        meal_type=recipe.meal_type,
+        is_halal=recipe.is_halal,
+        budget=recipe.budget,
+    ).exclude(id=recipe_id).order_by('?')[:4]  # random selection
+
+    # if fewer than 4, loosen to just same meal_type
+    if recommended.count() < 4:
+        extras = Recipe.objects.filter(
+            meal_type=recipe.meal_type,
+        ).exclude(id=recipe_id).exclude(
+            id__in=[r.id for r in recommended]
+        ).order_by('?')[:4 - recommended.count()]
+        recommended = list(recommended) + list(extras)
+
+    data = [
+        {
+            'id':         r.id,
+            'name':       r.name,
+            'meal_type':  r.get_meal_type_display(),
+            'budget':     r.get_budget_display(),
+            'is_halal':   r.is_halal,
+            'image_url':  r.image_url or '',
+            'avg_rating': r.avg_rating,
+            'cooking_time': r.cooking_time,
+        }
+        for r in recommended
+    ]
+    return JsonResponse(data, safe=False)
 
 # ── To Make API ───────────────────────────────────────────────────────────────
 # Called when user clicks "To Make" on a recipe card.

@@ -47,6 +47,9 @@ urlpatterns = [
     path("api/rate/<int:recipe_id>/",          views.rate_recipe,         name="rate_recipe"),
     path("api/ratings/<int:recipe_id>/",       views.get_recipe_ratings,  name="get_recipe_ratings"),
 
+    # Recommended recipes (used at bottom of detail page)
+    path("api/recommended/<int:recipe_id>/", views.recommended_recipes, name="recommended_recipes"),
+
     # ── Auth ──────────────────────────────────────────────────────────────────
     path("signup/", views.signup_view, name="signup"),
 

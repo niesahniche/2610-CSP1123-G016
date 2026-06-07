@@ -1,7 +1,63 @@
 {% extends 'pages/base.html' %}
 
 {% block content %}
-    <h1>Campus Cook</h1>
-    <p>Welcome to Campus Cook!</p>
-    <!-- no nav needed here, base.html already has it -->
+
+<style>
+  .home_hero {
+    max-width: 700px; margin: 5rem auto 3rem;
+    text-align: center; padding: 0 1.5rem;
+  }
+  .home_hero h1 {
+    font-size: 3rem; font-weight: 800; color: var(--brown);
+    letter-spacing: -1px; margin-bottom: 1rem; line-height: 1.1;
+  }
+  .home_hero h1 span { color: var(--green-dark); }
+  .home_hero p { font-size: 1.15rem; color: #7a6a5a; margin-bottom: 2.5rem; line-height: 1.7; }
+  .home_cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .home_cta a {
+    padding: 0.85rem 2rem; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .cta_primary { background: var(--green-dark); color: #fff; box-shadow: 0 4px 14px rgba(45,106,79,0.3); }
+  .cta_primary:hover { background: var(--green); transform: translateY(-2px); color: #fff; }
+  .cta_secondary { background: #fff; color: var(--brown); border: 1.5px solid var(--tan); }
+  .cta_secondary:hover { border-color: var(--green); transform: translateY(-2px); color: var(--brown); }
+
+  .home_features {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 1.2rem; max-width: 860px; margin: 0 auto 4rem; padding: 0 1.5rem;
+  }
+  .feature_card {
+    background: #fff; border: 1.5px solid var(--tan); border-radius: 14px;
+    padding: 1.8rem 1.4rem; text-align: center;
+    box-shadow: 0 2px 8px rgba(44,37,32,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .feature_card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(44,37,32,0.1); }
+  .feature_icon { font-size: 2.2rem; margin-bottom: 0.8rem; }
+  .feature_card h3 { font-size: 1rem; font-weight: 700; color: var(--brown); margin-bottom: 0.4rem; }
+  .feature_card p { font-size: 0.85rem; color: #7a6a5a; line-height: 1.5; margin: 0; }
+</style>
+
+<div class="home_hero">
+  <h1>Campus <span>Cook</span> 🍳</h1>
+  <p>Discover budget-friendly recipes, manage your grocery list,<br>and cook smarter on campus.</p>
+  <div class="home_cta">
+    <a href="{% url 'recipe_list' %}" class="cta_primary">Browse Recipes</a>
+    {% if not user.is_authenticated %}
+      <a href="{% url 'signup' %}" class="cta_secondary">Create Account</a>
+    {% else %}
+      <a href="{% url 'grocery' %}" class="cta_secondary">My Grocery List</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="home_features">
+  <div class="feature_card"><div class="feature_icon">🍽️</div><h3>Browse Recipes</h3><p>Filter by budget, appliance, meal type, and more.</p></div>
+  <div class="feature_card"><div class="feature_icon">🛒</div><h3>Grocery List</h3><p>Track what you have and what you still need to buy.</p></div>
+  <div class="feature_card"><div class="feature_icon">⭐</div><h3>Rate & Review</h3><p>Share your thoughts and discover top-rated meals.</p></div>
+  <div class="feature_card"><div class="feature_icon">♥</div><h3>Save Favourites</h3><p>Bookmark recipes you love for quick access later.</p></div>
+</div>
+
 {% endblock %}

@@ -219,7 +219,7 @@ def recipe_filter(request):
 
     selected_meal_types = request.GET.getlist('meal_type')
     if selected_meal_types:
-        recipes = recipes.filter(meal_type__in=meal_types)
+        recipes = recipes.filter(meal_type__in=selected_meal_types)
 
     # min_rating filter — filters recipes whose average rating >= selected value
     # avg is computed from Rating rows linked to each recipe

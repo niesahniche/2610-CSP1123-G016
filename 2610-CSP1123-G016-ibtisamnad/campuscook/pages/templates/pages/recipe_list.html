@@ -88,14 +88,14 @@
                      Django stores: FavouriteRecipe(recipe_id=recipe.id, user=user) -->
                 <div class="card_actions">
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_tomake" data-recipe-id="{{ item.recipe.id }}" data-recipe-name="{{ item.recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
+                    <button class="btn_action btn_tomake" data-recipe-id="{{ item.recipe.id }}" data-recipe-name="{{ item.recipe.name }}" onclick="event.stopPropagation(); step1CheckIngredients(this)">🍳 To Make</button>
                     {% endif %}
 
                     {% if user.is_authenticated %}
                     <button class="btn_action btn_fav {% if item.recipe.id in fav_ids %}btn_fav_active{% endif %}"
                         data-recipe-id="{{ item.recipe.id }}" 
                         data-fav="{% if item.recipe.id in fav_ids %}true{% else %}false{% endif %}"
-                        onclick="toggleFav(this)"
+                        onclick="event.stopPropagation(); toggleFav(this)"
                         title="{% if item.recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
                     >
                     {% if item.recipe.id in fav_ids %}♥ Favourited{% else %}♡ Favourite{% endif %}
@@ -104,8 +104,7 @@
 
                     <button class="btn_action btn_share" 
                         data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'recipe_detail' item.recipe.id %}" 
-                        onclick="shareRecipe(this)">🔗 Share</button>
-                        📂 {{ item.recipe.get_meal_type_display }}
+                        onclick="event.stopPropagation(); shareRecipe(this)">🔗 Share</button>
 
                     {% if user.is_authenticated and item.recipe.user == user %}
                     <button class="btn_action btn_delete"
@@ -161,14 +160,14 @@
     .btn_check:hover { background: #6ac383; color: #fff; }
     .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
     .btn_tomake:hover { background: #e6a817; color: #fff; }
-    .btn_fav   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
-    .btn_fav:hover { background: #9b72d4; color: #fff; }
-    .btn_favourited  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
+    .btn_fav   { background: #f5f0ff; color: #c0386a; border-color: #e8a0bb; }
+    .btn_fav:hover { background: #c0386a; color: #fff; }
+    .btn_fav_active { background: #c0386a !important; color: #fff !important; border-color: #c0386a !important;cursor: default; }
+    .btn_fav_active:hover { background: #a02a58 !important; border-color: #a02a58 !important; cursor: default; }
     .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
     .btn_share:hover { background: #6488d4; color: #fff; }
     .btn_delete { background: #fff5f5; color: #b85c38; border-color: #f0b4ae; }
     .btn_delete:hover { background: #b85c38; color: #fff; }
-    .btn_fav_active { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; }
     .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
     .popup-overlay.open { display: block; }
     .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border-radius: 16px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }

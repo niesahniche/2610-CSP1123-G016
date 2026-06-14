@@ -48,7 +48,7 @@
                     </button>
                     {% if user.is_authenticated and recipe.user == user %}
                     <button class="btn_action btn_delete"
-                        onclick="deleteRecipe({{ recipe.id }})">
+                        onclick="event.stopPropagation(); deleteRecipe({{ recipe.id }})">
                         🗑 Delete
                     </button>
                     {% endif %}
@@ -85,6 +85,8 @@
                 {% endif %}
 
                 <span class="recipe_meal_type">📂 {{ recipe.get_meal_type_display }}</span>
+
+            </div>
 
             <!-- RECIPE CREATOR & RATING ────────────────────────────────────
                  recipe.user.username → creator name
@@ -268,9 +270,10 @@
     .btn_check:hover { background: #6ac383; color: #fff; }
     .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
     .btn_tomake:hover { background: #e6a817; color: #fff; }
-    .btn_favourited   { background: #f5f0ff; color: #5a3a8a; border-color: #9b72d4; }
-    .btn_favourited:hover { background: #9b72d4; color: #fff; }
-    .btn_favourited  { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; cursor: default; }
+    .btn_fav    { background: #fff0f5; color: #c0386a; border-color: #e8a0bb; }
+    .btn_fav:hover { background: #c0386a; color: #fff; border-color: #c0386a; }
+    .btn_fav_active { background: #c0386a !important; color: #fff !important; border-color: #c0386a !important; cursor: default; }
+    .btn_fav_active:hover { background: #a02a58 !important; border-color: #a02a58 !important; cursor: default; }
     .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
     .btn_share:hover { background: #6488d4; color: #fff; }
     .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }

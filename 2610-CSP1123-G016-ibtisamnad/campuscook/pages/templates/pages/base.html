@@ -11,6 +11,63 @@
     
     <script src="{% static 'pages/script.js' %}" defer></script>
     <link rel="stylesheet" href="{% static 'pages/style.css' %}">
+    <style>
+        body {
+            margin: 0;
+            background: #f8f3ed;
+            color: #171717;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        nav {
+            background: #2f6f53;
+            box-shadow: 0 4px 14px rgba(31, 55, 42, 0.14);
+        }
+
+        nav ul {
+            display: flex;
+            align-items: center;
+            gap: 2.4rem;
+            margin: 0;
+            padding: 0.85rem 4.2rem;
+            list-style: none;
+        }
+
+        nav a,
+        .nav_logout_btn {
+            color: #f3ead9;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.2;
+            text-decoration: none;
+        }
+
+        nav a:hover,
+        .nav_logout_btn:hover {
+            color: #ffffff;
+        }
+
+        .nav_logout_btn {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        @media (max-width: 760px) {
+            nav ul {
+                flex-wrap: wrap;
+                gap: 1rem 1.4rem;
+                padding: 0.9rem 1.3rem;
+            }
+
+            nav a,
+            .nav_logout_btn {
+                font-size: 1.05rem;
+            }
+        }
+    </style>
 </head>
 <body>
 

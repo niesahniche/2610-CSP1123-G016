@@ -24,9 +24,6 @@ urlpatterns = [
     # ── Add recipe — requires login ───────────────────────────────────────────
     path("recipes/add/", views.add_recipe, name="add_recipe"),
 
-    # ── To Make — checks ingredients, adds missing to Grocery table ───────────
-    path("api/to-make/<int:recipe_id>/", views.to_make, name="to_make"),
-
     # ── Favourite recipes (HTML page) ─────────────────────────────────────────
     path("saved/", views.favourite_recipes, name="saved_recipes"),
 
@@ -50,11 +47,14 @@ urlpatterns = [
     # ── Auth ──────────────────────────────────────────────────────────────────
     path("signup/", views.signup_view, name="signup"),
 
-    path("accounts/login/",
-         auth_views.LoginView.as_view(template_name="pages/login.html"),
-         name="login"),
+    # Custom login view (replaces Django's built-in) — handles 2FA step 1
+    path("accounts/login/", views.login_view, name="login"),
 
     path("accounts/logout/", views.logout_view, name="logout"),
+
+    # ── 2FA ───────────────────────────────────────────────────────────────────
+    path("accounts/verify/", views.verify_2fa,  name="verify_2fa"),
+    path("accounts/resend/", views.resend_2fa,  name="resend_2fa"),
 
     path("profile/", views.profile, name="profile"),
 ]

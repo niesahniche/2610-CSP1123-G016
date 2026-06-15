@@ -1,0 +1,98 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-header">
+    <h1>Verify Your Identity</h1>
+    <p>We sent a 6-digit code to <strong>{{ masked_email }}</strong></p>
+  </div>
+
+  <form method="POST" action="{% url 'verify_2fa' %}">
+    {% csrf_token %}
+
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-group">
+      <label for="code">Verification Code</label>
+      <input
+        type="text"
+        id="code"
+        name="code"
+        placeholder="Enter 6-digit code"
+        maxlength="6"
+        autocomplete="one-time-code"
+        inputmode="numeric"
+        autofocus
+      />
+    </div>
+
+    <button type="submit" class="btn-submit">Verify</button>
+  </form>
+
+  <p class="footer-link">
+    Didn't receive a code?
+    <a href="{% url 'resend_2fa' %}">Resend</a>
+  </p>
+
+  <p class="footer-link" style="margin-top:0.4rem;">
+    <a href="{% url 'login' %}">← Back to login</a>
+  </p>
+</div>
+
+<style>
+  .card {
+    background: #fff; border: 1px solid #2e2e42;
+    border-radius: 16px; padding: 2.5rem 2rem;
+    width: 100%; max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    margin: 2rem auto;
+  }
+  .card-header { text-align: center; margin-bottom: 2rem; }
+  .card-header h1 { font-size: 1.75rem; font-weight: 700; color: #000; }
+  .card-header p  { color: #555; margin-top: 0.4rem; font-size: 0.9rem; }
+  .card-header strong { color: #025f1e; }
+
+  .form-group { margin-bottom: 1.2rem; }
+
+  label {
+    display: block; font-size: 0.8rem; font-weight: 600;
+    color: #025f1e; margin-bottom: 0.4rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  input[type="text"] {
+    width: 100%; height: 48px; padding: 0 0.8rem;
+    border: 1.5px solid #555; border-radius: 4px;
+    font-size: 1.4rem; color: #111; background: #fff;
+    outline: none; text-align: center; letter-spacing: 0.5rem;
+  }
+  input:focus { border-color: #7c5cbf; box-shadow: 0 0 0 3px rgba(124,92,191,0.15); }
+
+  .messages { margin-bottom: 1.2rem; }
+  .message { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 0.5rem; }
+  .message.success { background: #1a3a2a; color: #4caf82; border: 1px solid #2d5a3d; }
+  .message.error   { background: #fdf0ee; color: #9b2226; border: 1px solid #f0b4ae; }
+
+  .btn-submit {
+    width: 100%; padding: 0.875rem;
+    background: #94D4AA; color: #fff; border: none;
+    border-radius: 8px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin-top: 0.5rem;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-submit:hover  { background: #6AC383; }
+  .btn-submit:active { transform: scale(0.99); }
+
+  .footer-link { text-align: center; margin-top: 1rem; font-size: 0.82rem; color: #888; }
+  .footer-link a { color: #7c5cbf; font-weight: 600; text-decoration: none; }
+  .footer-link a:hover { text-decoration: underline; }
+</style>
+
+{% endblock %}

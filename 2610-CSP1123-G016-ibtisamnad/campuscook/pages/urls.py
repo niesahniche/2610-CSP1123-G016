@@ -1,5 +1,4 @@
 from django.urls import path
-from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
@@ -53,11 +52,14 @@ urlpatterns = [
     # ── Auth ──────────────────────────────────────────────────────────────────
     path("signup/", views.signup_view, name="signup"),
 
-    path("accounts/login/",
-         auth_views.LoginView.as_view(template_name="pages/login.html"),
-         name="login"),
+    path("accounts/login/", views.login_view, name="login"),
+    path("accounts/verify-2fa/", views.verify_2fa, name="verify_2fa"),
+    path("accounts/resend-2fa/", views.resend_2fa, name="resend_2fa"),
 
     path("accounts/logout/", views.logout_view, name="logout"),
 
     path("profile/", views.profile, name="profile"),
+
+    # ── Feedback ──────────────────────────────────────────────────────────────
+    path("feedback/", views.feedback_view, name="feedback"),
 ]

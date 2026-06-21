@@ -145,6 +145,26 @@ class Comment(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+class Feedback(models.Model):
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
+
+    user       = models.ForeignKey(
+        'pages.AppUser',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='feedback_entries'
+    )
+    name       = models.CharField(max_length=100)
+    email      = models.EmailField(blank=True)
+    rating     = models.IntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    message    = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Feedback from {self.name} ({self.created_at:%Y-%m-%d})"
 
 class Rating(models.Model):
     STAR_CHOICES = [(i, str(i)) for i in range(1, 6)]

@@ -5,11 +5,17 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg
-from .forms import AppUserCreationForm, RecipeForm
+from .forms import AppUserCreationForm, RecipeForm, FeedbackForm
 import json
+import random
+import string
+from django.utils import timezone
+from datetime import timedelta
+from django.core.mail import send_mail
+from django.conf import settings
 from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating
 
 
@@ -568,9 +574,6 @@ def add_ingredients_to_grocery(request, recipe_id):
         'added_missing':    added_missing,
         'can_cook':         len(added_missing) == 0,
     })
-
-# ── Signup ────────────────────────────────────────────────────────────────────
-def signup_view(request):
     if request.user.is_authenticated:
         return redirect('home')
     if request.method == 'POST':
@@ -586,6 +589,184 @@ def signup_view(request):
         form = AppUserCreationForm()
     return render(request, 'pages/signup.html', {'form': form})
 
+# ── 2FA helpers ───────────────────────────────────────────────────────────────
+
+def _generate_2fa_code():
+    """Return a random 6-digit numeric string."""
+    return ''.join(random.choices(string.digits, k=6))
+
+
+def _send_2fa_email(user_email, code):
+    """Send the 2FA code to the user's email address."""
+    send_mail(
+        subject='Your Campus Cook verification code',
+        message=(
+            f'Your verification code is: {code}\n\n'
+            f'It expires in 10 minutes. Do not share it with anyone.'
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user_email],
+        fail_silently=False,
+    )
+
+
+def _mask_email(email):
+    """Return a masked version of the email, e.g. j***@gmail.com"""
+    if not email or '@' not in email:
+        return email
+    name, domain = email.split('@', 1)
+    return f"{name[0]}***@{domain}"
+
+
+# ── Custom login view with 2FA ────────────────────────────────────────────────
+def login_view(request):
+    """
+    Replaces Django's built-in LoginView.
+    Step 1: validate username + password.
+    Step 2: if user has 2FA enabled (has an email), send code and redirect to verify page.
+            if no email set, log in directly.
+    """
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    # Reuse Django's AuthenticationForm for validation
+    from django.contrib.auth.forms import AuthenticationForm
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+
+            # ── 2FA branch: user has an email set ────────────────────────────
+            if user.email:
+                code = _generate_2fa_code()
+                # Store in session so verify_2fa can check it
+                request.session['2fa_user_id']  = user.pk
+                request.session['2fa_code']     = code
+                request.session['2fa_expires']  = (
+                    timezone.now() + timedelta(minutes=10)
+                ).isoformat()
+                request.session['2fa_next']     = request.POST.get('next', '')
+
+                try:
+                    _send_2fa_email(user.email, code)
+                    print (user.email)
+                except Exception:
+                    messages.error(request, 'Could not send verification email. Please try again.')
+                    return render(request, 'pages/login.html', {'form': form})
+
+                return redirect('verify_2fa')
+
+            # ── No email — skip 2FA, log in directly ─────────────────────────
+            login(request, user)
+            next_url = request.POST.get('next') or settings.LOGIN_REDIRECT_URL
+            return redirect(next_url)
+        # invalid credentials — fall through to re-render with errors
+    else:
+        form = AuthenticationForm(request)
+
+    return render(request, 'pages/login.html', {'form': form})
+
+
+# ── Step 2: verify the emailed code ──────────────────────────────────────────
+def verify_2fa(request):
+    """
+    Shows the code entry form (GET) and validates the submitted code (POST).
+    Requires that login_view has already stored 2fa_user_id in the session.
+    """
+    # Guard: must have started 2FA flow
+    if '2fa_user_id' not in request.session:
+        return redirect('login')
+
+    user_id = request.session['2fa_user_id']
+
+    try:
+        user = AppUser.objects.get(pk=user_id)
+    except AppUser.DoesNotExist:
+        return redirect('login')
+
+    if request.method == 'POST':
+        submitted_code = request.POST.get('code', '').strip()
+        stored_code    = request.session.get('2fa_code', '')
+        expires_str    = request.session.get('2fa_expires', '')
+
+        # Check expiry
+        expired = False
+        if expires_str:
+            from django.utils.dateparse import parse_datetime
+            expires_at = parse_datetime(expires_str)
+            if expires_at and timezone.now() > expires_at:
+                expired = True
+
+        if expired:
+            messages.error(request, 'Your code has expired. Please log in again.')
+            _clear_2fa_session(request)
+            return redirect('login')
+
+        if submitted_code == stored_code:
+            # Success — log the user in and clean up session
+            next_url = request.session.get('2fa_next') or settings.LOGIN_REDIRECT_URL
+            _clear_2fa_session(request)
+            login(request, user)
+            return redirect(next_url)
+        else:
+            messages.error(request, 'Incorrect code. Please try again.')
+
+    return render(request, 'pages/verify_2fa.html', {
+        'masked_email': _mask_email(user.email),
+    })
+
+
+# ── Resend the 2FA code ───────────────────────────────────────────────────────
+def resend_2fa(request):
+    """Generates a fresh code and re-sends it, then redirects back to verify."""
+    if '2fa_user_id' not in request.session:
+        return redirect('login')
+
+    user_id = request.session['2fa_user_id']
+    try:
+        user = AppUser.objects.get(pk=user_id)
+    except AppUser.DoesNotExist:
+        return redirect('login')
+
+    code = _generate_2fa_code()
+    request.session['2fa_code']    = code
+    request.session['2fa_expires'] = (
+        timezone.now() + timedelta(minutes=10)
+    ).isoformat()
+
+    try:
+        _send_2fa_email(user.email, code)
+        messages.success(request, 'A new code has been sent to your email.')
+    except Exception:
+        messages.error(request, 'Could not send email. Please try again.')
+
+    return redirect('verify_2fa')
+
+
+def _clear_2fa_session(request):
+    """Remove all 2FA keys from the session."""
+    for key in ('2fa_user_id', '2fa_code', '2fa_expires', '2fa_next'):
+        request.session.pop(key, None)
+
+
+# ── Signup ────────────────────────────────────────────────────────────────────
+def signup_view(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        form = AppUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.email = request.POST.get('email', '')
+            user.save()
+            login(request, user)
+            messages.success(request, f"Welcome, {user.username}!")
+            return redirect('home')
+        else:
+            messages.error(request, "Please fix the errors below.")
+    else:
+        form = AppUserCreationForm()
+    return render(request, 'pages/signup.html', {'form': form})
 
 # ── Logout ────────────────────────────────────────────────────────────────────
 def logout_view(request):
@@ -595,6 +776,26 @@ def logout_view(request):
         return redirect('login')
     return redirect('home')
 
+# ── Feedback ──────────────────────────────────────────────────────────────────
+def feedback_view(request):
+    if request.method == 'POST':
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            fb = form.save(commit=False)
+            if request.user.is_authenticated:
+                fb.user = request.user
+            fb.save()
+            messages.success(request, "Thanks for your feedback — we really appreciate it!")
+            return redirect('feedback')
+        else:
+            messages.error(request, "Please fix the errors below.")
+    else:
+        initial = {}
+        if request.user.is_authenticated:
+            initial['name'] = request.user.username
+            initial['email'] = request.user.email
+        form = FeedbackForm(initial=initial)
+    return render(request, 'pages/feedback.html', {'form': form})
 
 # ── Profile ───────────────────────────────────────────────────────────────────
 @login_required
@@ -604,7 +805,6 @@ def profile(request):
         'user':              request.user,
         'favourites': favourites,
     })
-
 
 # ── Comments API ──────────────────────────────────────────────────────────────
 @csrf_exempt
@@ -655,7 +855,6 @@ def get_comments(request, recipe_id):
     ]
     return JsonResponse(data, safe=False)
 
-
 # ── Rating API ────────────────────────────────────────────────────────────────
 @csrf_exempt
 @require_http_methods(['POST'])
@@ -692,7 +891,6 @@ def rate_recipe(request, recipe_id):
         }, status=201 if created else 200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
-
 
 @require_http_methods(['GET'])
 def get_recipe_ratings(request, recipe_id):

@@ -1,0 +1,115 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<div class="auth-card">
+  <div class="auth-card-header">
+    <h1>Verify Your Identity</h1>
+    <p>We sent a 6-digit code to <strong>{{ masked_email }}</strong></p>
+  </div>
+
+  <form method="POST" action="{% url 'verify_2fa' %}">
+    {% csrf_token %}
+
+    {% if messages %}
+      <div class="auth-messages">
+        {% for message in messages %}
+          <div class="auth-message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="auth-form-group">
+      <label for="code">Verification Code</label>
+      <input
+        type="text"
+        id="code"
+        name="code"
+        class="auth-code-input"
+        placeholder="••••••"
+        maxlength="6"
+        autocomplete="one-time-code"
+        inputmode="numeric"
+        autofocus
+      />
+    </div>
+
+    <button type="submit" class="auth-btn-submit">Verify</button>
+  </form>
+
+  <p class="auth-footer-link">
+    Didn't receive a code?
+    <a href="{% url 'resend_2fa' %}">Resend</a>
+  </p>
+
+  <p class="auth-footer-link" style="margin-top:0.4rem;">
+    <a href="{% url 'login' %}">← Back to login</a>
+  </p>
+</div>
+
+<style>
+  .auth-card {
+    background: #fff;
+    border: 1.5px solid var(--tan);
+    border-radius: 16px;
+    padding: 2.5rem 2.25rem;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 10px 32px rgba(44, 37, 32, 0.10);
+    margin: 3rem auto;
+    animation: auth-fade-in 0.35s ease;
+  }
+  @keyframes auth-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .auth-card-header { text-align: center; margin-bottom: 1.75rem; }
+  .auth-card-header h1 { font-size: 1.7rem; font-weight: 700; color: var(--brown); margin: 0; }
+  .auth-card-header p  { color: #8a8070; margin-top: 0.5rem; font-size: 0.92rem; }
+  .auth-card-header strong { color: var(--green-dark); }
+
+  .auth-form-group { margin-bottom: 1.25rem; }
+
+  .auth-form-group label {
+    display: block; font-size: 0.78rem; font-weight: 700;
+    color: var(--green-dark); margin-bottom: 0.4rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  .auth-code-input {
+    width: 100%; height: 56px; padding: 0 0.8rem;
+    border: 1.5px solid var(--tan); border-radius: 10px;
+    font-size: 1.6rem; color: var(--brown); background: var(--cream);
+    outline: none; text-align: center; letter-spacing: 0.6rem;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+  .auth-code-input:focus {
+    border-color: var(--green); background: #fff;
+    box-shadow: 0 0 0 3px rgba(106, 195, 131, 0.18);
+  }
+
+  .auth-messages { margin-bottom: 1.25rem; }
+  .auth-message {
+    padding: 0.7rem 1rem; border-radius: 8px;
+    font-size: 0.875rem; margin-bottom: 0.5rem;
+  }
+  .auth-message.success { background: #eaf6ee; color: var(--green-dark); border: 1px solid #bfe3cc; }
+  .auth-message.error   { background: #fdf0ee; color: #9b2226; border: 1px solid #f0b4ae; }
+
+  .auth-btn-submit {
+    width: 100%; padding: 0.875rem;
+    background: var(--green-dark); color: #fff; border: none;
+    border-radius: 8px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin-top: 0.4rem;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .auth-btn-submit:hover  { background: var(--green); }
+  .auth-btn-submit:active { transform: scale(0.98); }
+
+  .auth-footer-link { text-align: center; margin-top: 1rem; font-size: 0.85rem; color: #8a8070; }
+  .auth-footer-link a { color: var(--green-dark); font-weight: 600; text-decoration: none; }
+  .auth-footer-link a:hover { color: var(--green); text-decoration: underline; }
+</style>
+
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<div class="auth-card feedback-card">
+  <div class="auth-card-header">
+    <h1>Got Feedback?</h1>
+    <p>Tell us what's working, what's not, and what you'd love to see next.</p>
+  </div>
+
+  <form method="POST" action="{% url 'feedback' %}">
+    {% csrf_token %}
+
+    {% if messages %}
+      <div class="auth-messages">
+        {% for message in messages %}
+          <div class="auth-message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="auth-form-group">
+      <label for="id_name">Name</label>
+      <input
+        type="text"
+        id="id_name"
+        name="name"
+        placeholder="Your name"
+        value="{{ form.name.value|default:'' }}"
+      />
+      {% if form.name.errors %}
+        <ul class="auth-errorlist">
+          {% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+
+    <div class="auth-form-group">
+      <label for="id_email">Email <span class="auth-optional">(optional)</span></label>
+      <input
+        type="email"
+        id="id_email"
+        name="email"
+        placeholder="you@example.com"
+        value="{{ form.email.value|default:'' }}"
+      />
+      {% if form.email.errors %}
+        <ul class="auth-errorlist">
+          {% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+
+    <div class="auth-form-group">
+      <label>How would you rate Campus Cook? <span class="auth-optional">(optional)</span></label>
+      <div class="star-rating">
+        {% for value in "54321" %}
+          <input type="radio" name="rating" id="star{{ value }}" value="{{ value }}"
+            {% if form.rating.value|stringformat:"s" == value %}checked{% endif %}>
+          <label for="star{{ value }}" class="star-label" title="{{ value }} star">★</label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="auth-form-group">
+      <label for="id_message">Your Feedback</label>
+      <textarea
+        id="id_message"
+        name="message"
+        rows="5"
+        placeholder="Tell us what you think, what you'd like to see, or anything that's bugging you..."
+      >{{ form.message.value|default:'' }}</textarea>
+      {% if form.message.errors %}
+        <ul class="auth-errorlist">
+          {% for error in form.message.errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="auth-btn-submit">Send Feedback</button>
+  </form>
+</div>
+
+<style>
+  .auth-card {
+    background: #fff;
+    border: 1.5px solid var(--tan);
+    border-radius: 16px;
+    padding: 2.5rem 2.25rem;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 10px 32px rgba(44, 37, 32, 0.10);
+    margin: 3rem auto;
+    animation: auth-fade-in 0.35s ease;
+  }
+  @keyframes auth-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .auth-card-header { text-align: center; margin-bottom: 1.75rem; }
+  .auth-card-header h1 { font-size: 1.7rem; font-weight: 700; color: var(--brown); margin: 0; }
+  .auth-card-header p  { color: var(--olive); margin-top: 0.4rem; font-size: 0.92rem; }
+
+  .auth-form-group { margin-bottom: 1.25rem; }
+
+  .auth-form-group label {
+    display: block; font-size: 0.78rem; font-weight: 700;
+    color: var(--green-dark); margin-bottom: 0.4rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .auth-optional { color: #b0a890; font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+  .auth-card input[type="text"],
+  .auth-card input[type="email"],
+  .auth-card textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--cream);
+    border: 1.5px solid var(--tan);
+    border-radius: 8px;
+    color: var(--brown);
+    font-size: 0.95rem;
+    outline: none;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+  .auth-card input:focus,
+  .auth-card textarea:focus {
+    border-color: var(--green);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(106, 195, 131, 0.18);
+  }
+
+  /* ── Star rating ─────────────────────────────────── */
+  /* Stars are written 5→1 in the HTML; row-reverse displays them 1→5
+     left to right, and the `~` sibling selector lights up every star
+     at or below the hovered/checked one. */
+  .star-rating {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 0.2rem;
+    font-size: 2rem;
+    width: fit-content;
+  }
+  .star-rating input { display: none; }
+  .star-label {
+    color: var(--tan);
+    cursor: pointer;
+    transition: color 0.15s, transform 0.1s;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+  .star-rating input:checked ~ .star-label,
+  .star-rating .star-label:hover,
+  .star-rating .star-label:hover ~ .star-label {
+    color: var(--amber);
+  }
+  .star-label:hover { transform: scale(1.15); }
+
+  .auth-errorlist { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+  .auth-errorlist li { font-size: 0.78rem; color: #b3261e; }
+
+  .auth-messages { margin-bottom: 1.25rem; }
+  .auth-message {
+    padding: 0.7rem 1rem; border-radius: 8px;
+    font-size: 0.875rem; margin-bottom: 0.5rem;
+  }
+  .auth-message.success { background: #eaf6ee; color: var(--green-dark); border: 1px solid #bfe3cc; }
+  .auth-message.error   { background: #fdf0ee; color: #9b2226; border: 1px solid #f0b4ae; }
+
+  .auth-btn-submit {
+    width: 100%;
+    padding: 0.875rem;
+    background: var(--green-dark);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.4rem;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .auth-btn-submit:hover  { background: var(--green); }
+  .auth-btn-submit:active { transform: scale(0.98); }
+</style>
+
+{% endblock %}

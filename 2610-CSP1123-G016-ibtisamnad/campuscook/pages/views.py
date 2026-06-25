@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, Q #perform an OR query
-from .forms import AppUserCreationForm, RecipeForm, FeedbackForm
+from .forms import AppUserCreationForm, RecipeForm, FeedbackForm, EmailOrUsernameAuthenticationForm
 import json
 import random
 import string
@@ -278,12 +278,6 @@ def recipe_list(request):
     return render(request, 'pages/recipe_list.html', {
         'recipes':       recipes_with_info, # Use this array to loop through cards in your template
         'page_obj':      recipes_page,      # Common naming convention for pagination elements
-        'favourited_ids': favourited_ids,
-    })
- 
-    return render(request, 'pages/recipe_list.html', {
-        'recipes':        recipes_with_info,
-        'page':           recipes_page,
         'favourited_ids': favourited_ids,
     })
 
@@ -667,20 +661,6 @@ def add_ingredients_to_grocery(request, recipe_id):
         'added_missing':    added_missing,
         'can_cook':         len(added_missing) == 0,
     })
-    if request.user.is_authenticated:
-        return redirect('home')
-    if request.method == 'POST':
-        form = AppUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, f"Welcome, {user.username}!")
-            return redirect('home')
-        else:
-            messages.error(request, "Please fix the errors below.")
-    else:
-        form = AppUserCreationForm()
-    return render(request, 'pages/signup.html', {'form': form})
 
 # ── 2FA helpers ───────────────────────────────────────────────────────────────
 
@@ -689,19 +669,23 @@ def _generate_2fa_code():
     return ''.join(random.choices(string.digits, k=6))
 
 
-def _send_2fa_email(user_email, code):
-    """Send the 2FA code to the user's email address."""
+def _send_2fa_email(email, code):
+    """Sends a 2FA code email from wearecampuscook@gmail.com using settings config."""
+    subject = "Your CampusCook Verification Code"
+    message = (
+        f"Thank you for signing up with CampusCook!\n\n"
+        f"Your 6-digit verification code is: {code}\n\n"
+        f"This code will expire in 10 minutes. Please enter it on the confirmation page to activate your account."
+    )
+    
+    # settings.EMAIL_HOST_USER ensures it matches 'wearecampuscook@gmail.com' securely
     send_mail(
-        subject='Your Campus Cook verification code',
-        message=(
-            f'Your verification code is: {code}\n\n'
-            f'It expires in 10 minutes. Do not share it with anyone.'
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user_email],
+        subject=subject,
+        message=message,
+        from_email=settings.EMAIL_HOST_USER,
+        recipient_list=[email],
         fail_silently=False,
     )
-
 
 def _mask_email(email):
     """Return a masked version of the email, e.g. j***@gmail.com"""
@@ -711,51 +695,27 @@ def _mask_email(email):
     return f"{name[0]}***@{domain}"
 
 
-# ── Custom login view with 2FA ────────────────────────────────────────────────
+# ── Login view (username-or-email + password, no 2FA) ────────────────────────
 def login_view(request):
     """
     Replaces Django's built-in LoginView.
-    Step 1: validate username + password.
-    Step 2: if user has 2FA enabled (has an email), send code and redirect to verify page.
-            if no email set, log in directly.
+    Accepts either username or email in the 'username' field, plus password.
+    No 2FA here — verification only happens once, at signup, to confirm the
+    email address is real. Logging in afterwards is just credentials.
     """
     if request.user.is_authenticated:
         return redirect('home')
 
-    # Reuse Django's AuthenticationForm for validation
-    from django.contrib.auth.forms import AuthenticationForm
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
+        form = EmailOrUsernameAuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-
-            # ── 2FA branch: user has an email set ────────────────────────────
-            if user.email:
-                code = _generate_2fa_code()
-                # Store in session so verify_2fa can check it
-                request.session['2fa_user_id']  = user.pk
-                request.session['2fa_code']     = code
-                request.session['2fa_expires']  = (
-                    timezone.now() + timedelta(minutes=10)
-                ).isoformat()
-                request.session['2fa_next']     = request.POST.get('next', '')
-
-                try:
-                    _send_2fa_email(user.email, code)
-                    print (user.email)
-                except Exception:
-                    messages.error(request, 'Could not send verification email. Please try again.')
-                    return render(request, 'pages/login.html', {'form': form})
-
-                return redirect('verify_2fa')
-
-            # ── No email — skip 2FA, log in directly ─────────────────────────
             login(request, user)
             next_url = request.POST.get('next') or settings.LOGIN_REDIRECT_URL
             return redirect(next_url)
         # invalid credentials — fall through to re-render with errors
     else:
-        form = AuthenticationForm(request)
+        form = EmailOrUsernameAuthenticationForm(request)
 
     return render(request, 'pages/login.html', {'form': form})
 
@@ -843,22 +803,43 @@ def _clear_2fa_session(request):
 
 
 # ── Signup ────────────────────────────────────────────────────────────────────
+# ── Signup ────────────────────────────────────────────────────────────────────
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect('home')
+        
     if request.method == 'POST':
         form = AppUserCreationForm(request.POST)
         if form.is_valid():
+            # 1. Save the new user safely to the database
             user = form.save(commit=False)
-            user.email = request.POST.get('email', '')
+            user.email = request.POST.get('email', '').strip().lower()
             user.save()
-            login(request, user)
-            messages.success(request, f"Welcome, {user.username}!")
-            return redirect('home')
+            
+            # 2. Generate a secure 6-digit verification code
+            code = _generate_2fa_code()
+            
+            # 3. Store validation profiles inside the session data store
+            request.session['2fa_user_id']  = user.pk
+            request.session['2fa_code']     = code
+            request.session['2fa_expires']  = (timezone.now() + timedelta(minutes=10)).isoformat()
+            request.session['2fa_next']     = 'home'
+            
+            # 4. Dispatch verification credentials to the inbox
+            try:
+                _send_2fa_email(user.email, code)
+            except Exception:
+                messages.error(request, 'Account created, but we could not send your verification email. Please try logging in to retry.')
+                return redirect('login')
+                
+            # 5. Redirect straight to your verification terminal
+            messages.success(request, "Account created successfully! Please check your email for your verification code.")
+            return redirect('verify_2fa')
         else:
             messages.error(request, "Please fix the errors below.")
     else:
         form = AppUserCreationForm()
+        
     return render(request, 'pages/signup.html', {'form': form})
 
 # ── Logout ────────────────────────────────────────────────────────────────────

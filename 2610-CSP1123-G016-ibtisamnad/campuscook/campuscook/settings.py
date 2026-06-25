@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -115,17 +116,25 @@ USE_I18N = True
 
 USE_TZ = True
 
-# ── Email (used to send 2FA verification codes) ───────────────────────────────
-# SECURITY NOTE: load these from environment variables in real use, e.g.
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+# ── Gmail SMTP Email Configuration ──────────────────────────────────────────
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'wearecampuscook@gmail.com'
-EMAIL_HOST_PASSWORD = 'urxm vnkw hgvc vzkk'
-DEFAULT_FROM_EMAIL = 'Campus Cook <wearecampuscook@gmail.com>'
+
+# The explicit address providing verification dispatches
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'wearecampuscook@gmail.com')
+
+# IMPORTANT: This must be a 16-character Google App Password, NOT your regular password!
+# Set EMAIL_HOST_PASSWORD as an environment variable (e.g. in a local .env file
+# that is gitignored, or in your hosting provider's secrets manager).
+# Do NOT hardcode it here — if a password was ever committed to this file,
+# treat it as compromised and regenerate a new App Password in your Google
+# Account settings, then revoke the old one.
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+# Default sender profile fallback
+DEFAULT_FROM_EMAIL = f'CampusCook <{EMAIL_HOST_USER}>'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

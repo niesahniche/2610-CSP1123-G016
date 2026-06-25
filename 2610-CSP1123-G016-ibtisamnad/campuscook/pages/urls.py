@@ -5,10 +5,12 @@ urlpatterns = [
     # ── Main pages ────────────────────────────────────────────────────────────
     path("",       views.home,  name="home"),
     path("about/", views.about, name="about"),
+    path("popular/", views.popular, name="popular"),
 
     # ── Grocery ───────────────────────────────────────────────────────────────
     path("grocery/",          views.grocery,     name="grocery"),
     path("grocery/purchased/<int:id>/", views.purchase_item, name="purchase_item"),
+    path("grocery/transfer-purchased/", views.transfer_purchased_to_available, name="transfer_purchased_to_available"),
     path("remove/<int:id>/",  views.remove_item, name="remove_item"),
     
     # Ingredient search API — for autocomplete in grocery and add_recipe
@@ -41,6 +43,9 @@ urlpatterns = [
     # ── Comments API ──────────────────────────────────────────────────────────
     path("api/comments/<int:recipe_id>/",      views.get_comments,  name="get_comments"),
     path("api/add-comment/<int:recipe_id>/",   views.add_comment,   name="add_comment"),
+
+    # ── Profile ───────────────────────────────────────────────────────────
+    path('profile/update/', views.profile_update, name='profile_update'),
 
     # ── Ratings API ───────────────────────────────────────────────────────────
     path("api/rate/<int:recipe_id>/",          views.rate_recipe,         name="rate_recipe"),

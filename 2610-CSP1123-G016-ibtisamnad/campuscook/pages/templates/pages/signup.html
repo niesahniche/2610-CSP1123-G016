@@ -4,13 +4,13 @@
 
 <div class="auth-card">
   <div class="auth-card-header">
-    <h1>Welcome Back!</h1>
-    <p>Sign in to your account</p>
+    <h1>Create Account</h1>
+    <p>Sign up to get started</p>
   </div>
 
   <!-- views.login_view validates username + password, then emails a
        6-digit code and redirects to verify_2fa before logging the user in -->
-  <form method="POST" action="{% url 'login' %}">
+  <form method="POST" action="{% url 'signup' %}">
     {% csrf_token %}
 
     <input type="hidden" name="next" value="{{ next }}"/>
@@ -66,7 +66,7 @@
   </form>
 
   <p class="auth-footer-link">
-    Don't have an account? <a href="{% url 'signup' %}">Create one</a>
+    Already have an account? <a href="{% url 'login' %}">Sign In</a>
   </p>
 </div>
 

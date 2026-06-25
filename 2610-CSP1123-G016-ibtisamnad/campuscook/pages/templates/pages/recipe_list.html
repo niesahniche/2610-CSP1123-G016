@@ -17,14 +17,8 @@
             type="text"
             name="search"
             class="search_input"
-            placeholder="Search recipes..."
+            placeholder="Search recipes  or ingredients..."
             value="{{ request.GET.search }}">
-        <input 
-            type="text" 
-            name="ingredient" 
-            class="search_input"
-            placeholder="Search by ingredient..." 
-            value="{{ request.GET.ingredient }}">
         <button type="submit" class="search_btn">Search</button>
     </form>
 
@@ -92,13 +86,13 @@
                     {% endif %}
 
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_fav {% if item.recipe.id in fav_ids %}btn_fav_active{% endif %}"
-                        data-recipe-id="{{ item.recipe.id }}" 
-                        data-fav="{% if item.recipe.id in fav_ids %}true{% else %}false{% endif %}"
-                        onclick="event.stopPropagation(); toggleFav(this)"
-                        title="{% if item.recipe.id in fav_ids %}Unfavourite{% else %}Favourite{% endif %}"
+                    <button 
+                        class="btn_fav {% if item.is_favourited %}btn_fav_active{% endif %}" 
+                        data-recipe-id="{{ item.id }}"
+                        data-fav="{% if item.is_favourited %}true{% else %}false{% endif %}"
+                        onclick="toggleFav(this); event.stopPropagation();"
                     >
-                    {% if item.recipe.id in fav_ids %}♥ Favourited{% else %}♡ Favourite{% endif %}
+                        {% if item.is_favourited %}♥ Favourited{% else %}♡ Favourite{% endif %}
                     </button>
                     {% endif %}
 
@@ -160,9 +154,20 @@
     .btn_check:hover { background: #6ac383; color: #fff; }
     .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
     .btn_tomake:hover { background: #e6a817; color: #fff; }
-    .btn_fav   { background: #f5f0ff; color: #c0386a; border-color: #e8a0bb; }
-    .btn_fav:hover { background: #c0386a; color: #fff; }
-    .btn_fav_active { background: #c0386a !important; color: #fff !important; border-color: #c0386a !important;cursor: default; }
+    .btn_fav {
+        background: #ffff;
+        border: 1.5px solid #c0386a;
+        color: #c0386a;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;}
+    .btn_fav:hover { background: #c0386a; color: #fff; border-color: #c0386a; }
+    .btn_fav_active {
+        background: #fff5f5;
+        border-color: #c0386a;
+        color: #c0386a;}
     .btn_fav_active:hover { background: #a02a58 !important; border-color: #a02a58 !important; cursor: default; }
     .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
     .btn_share:hover { background: #6488d4; color: #fff; }
@@ -363,6 +368,13 @@ function closePopup() {
     document.getElementById('popup').classList.remove('open');
     document.getElementById('popupOverlay').classList.remove('open');
 }
+
+// Forces the page to completely reload its state if accessed via the browser's "Back" history button
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted || (typeof window.performance != "undefined" && window.performance.navigation.type === 2)) {
+        window.location.reload();
+    }
+});
 
 </script>
 

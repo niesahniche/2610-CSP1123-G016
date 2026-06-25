@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg
+from django.db.models import Avg, Count, Q #perform an OR query
 from .forms import AppUserCreationForm, RecipeForm, FeedbackForm
 import json
 import random
@@ -18,6 +18,41 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating
 
+def merge_recipe_labels(existing_label, new_label):
+    labels = []
+    if existing_label:
+        labels.extend([label.strip() for label in existing_label.split(',') if label.strip()])
+    if new_label:
+        labels.append(new_label.strip())
+    return ', '.join(dict.fromkeys(labels))
+
+
+def aggregate_grocery_items(items):
+    grouped = {}
+    for item in items:
+        key = (
+            item.name.strip().lower() if item.name else '',
+            (item.custom_name or '').strip().lower()
+        )
+        entry = grouped.get(key)
+        if not entry:
+            entry = {
+                'id': item.id,
+                'name': item.name,
+                'custom_name': item.custom_name,
+                'quantity': item.quantity,
+                'for_recipe': [],
+            }
+            grouped[key] = entry
+        if item.for_recipe:
+            entry['for_recipe'].extend([
+                label.strip() for label in item.for_recipe.split(',') if label.strip()
+            ])
+        if not entry['quantity'] and item.quantity:
+            entry['quantity'] = item.quantity
+    for entry in grouped.values():
+        entry['for_recipe'] = ', '.join(dict.fromkeys(entry['for_recipe']))
+    return list(grouped.values())
 
 # ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
@@ -117,9 +152,30 @@ def grocery(request):
     all_ingredients = Ingredient.objects.all().order_by('name')
     
     # Get user's grocery items
-    available = Grocery.objects.filter(user=user, status='available')
+    available_qs = Grocery.objects.filter(user=user, status='available')
     missing = Grocery.objects.filter(user=user, status='missing')
     purchased = Grocery.objects.filter(user=user, status='purchased')
+
+    available_names = {
+        name.strip().lower()
+        for name in available_qs.values_list('name', flat=True)
+        if name
+    }
+
+    # Determine recipe completion only from groceries labelled with recipe names
+    recipe_label_map = {}
+    labelled_groceries = Grocery.objects.filter(user=user).exclude(for_recipe__isnull=True).exclude(for_recipe__exact='')
+    for item in labelled_groceries:
+        for label in [label.strip() for label in item.for_recipe.split(',') if label.strip()]:
+            recipe_label_map.setdefault(label, set()).add(item.name.strip().lower())
+
+    completed_recipes = [
+        recipe_name
+        for recipe_name, labelled_names in recipe_label_map.items()
+        if labelled_names and labelled_names.issubset(available_names)
+    ]
+
+    available = aggregate_grocery_items(available_qs)
     
     return render(request, 'pages/grocery.html', {
         'all_ingredients': all_ingredients,
@@ -142,53 +198,93 @@ def remove_item(request, id):
     Grocery.objects.filter(id=id).delete()
     return redirect('grocery')
 
+# ── Transfer Purchased Items to Inventory ───────────────────────────────────
+@login_required
+@require_http_methods(['POST'])
+def transfer_purchased_to_available(request):
+    """
+    Finds all grocery items for the logged-in user that are marked as 'purchased',
+    and updates their status to 'available' so they count toward your pantry inventory.
+    """
+    # Filter items belonging to the current user with a status of 'purchased'
+    purchased_items = Grocery.objects.filter(user=request.user, status='purchased')
+    
+    count = purchased_items.count()
+    if count > 0:
+        # Bulk update the status field to 'available'
+        purchased_items.update(status='available')
+        messages.success(request, f"Successfully transferred {count} purchased item(s) to your available inventory!")
+    else:
+        messages.info(request, "No purchased items found to transfer.")
+
+    return redirect('grocery')
 
 # ── Recipe list ───────────────────────────────────────────────────────────────
 def recipe_list(request):
     recipes = Recipe.objects.all()
-    search  = request.GET.get('search', '')
-
+    
+    # 1. Gather all Text Searches
+    search = request.GET.get('search', '').strip()
     if search:
-        recipes = recipes.filter(name__icontains=search)
-            # search by ingredient name — filters recipes that contain a matching ingredient
-    ingredient_search_q = request.GET.get('ingredient', '')
+        recipes = recipes.filter(
+            Q(name__icontains=search) | Q(ingredients__name__icontains=search)
+        ).distinct()
+            
+    # 2. Gather Ingredient Filters
+    ingredient_search_q = request.GET.get('ingredient', '').strip()
     if ingredient_search_q:
         recipes = recipes.filter(
             ingredients__name__icontains=ingredient_search_q
         ).distinct()
-    paginator = Paginator(recipes, 6)
-    recipes_page = paginator.get_page(request.GET.get('page'))
 
-    # ADD after ingredient_search_q block:
+    # 3. Gather Meal Type Checkboxes
     meal_types = request.GET.getlist('meal_type')
     if meal_types:
         recipes = recipes.filter(meal_type__in=meal_types)
 
+    # 4. Gather Favourite IDs Set for Logged In User
     if request.user.is_authenticated:
-        fav_ids = set(
+        favourited_ids = set(
             FavouriteRecipe.objects.filter(user=request.user)
             .values_list('recipe_id', flat=True)
         )
     else:
-        fav_ids = set()
+        favourited_ids = set()
+
+    # 5. Process Pagination Blocks Securely
+    paginator = Paginator(recipes, 6)
+    recipes_page = paginator.get_page(request.GET.get('page'))
     
-    # Add rating and creator info to each recipe
+    # 6. Aggregate metadata loop arrays
     recipes_with_info = []
     for recipe in recipes_page:
         avg_rating = recipe.ratings.all().aggregate(Avg('stars'))['stars__avg'] or 0
         avg_rating = round(avg_rating, 1)
         total_ratings = recipe.ratings.count()
+        user_name = recipe.user.username if recipe.user else "Anonymous"
+        
+        is_favourited = recipe.id in favourited_ids
+        
         recipes_with_info.append({
             'recipe': recipe,
+            'id': recipe.id,
             'avg_rating': avg_rating,
             'total_ratings': total_ratings,
-            'creator': recipe.user.username,
+            'creator': user_name,
+            'is_favourited': is_favourited,
         })
+
+    # 7. Render Template with Data Maps
+    return render(request, 'pages/recipe_list.html', {
+        'recipes':       recipes_with_info, # Use this array to loop through cards in your template
+        'page_obj':      recipes_page,      # Common naming convention for pagination elements
+        'favourited_ids': favourited_ids,
+    })
  
     return render(request, 'pages/recipe_list.html', {
-        'recipes':   recipes_with_info,
-        'page':      recipes_page,
-        'fav_ids':   list(fav_ids),
+        'recipes':        recipes_with_info,
+        'page':           recipes_page,
+        'favourited_ids': favourited_ids,
     })
 
 # ── Recipe filter ─────────────────────────────────────────────────────────────
@@ -244,37 +340,34 @@ def recipe_filter(request):
 
 
 # ── Recipe detail ─────────────────────────────────────────────────────────────
+@login_required
 def recipe_detail(request, id):
     recipe = get_object_or_404(Recipe, id=id)
-    is_fav = (
-        request.user.is_authenticated and
-        FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+    
+    # Check if a favorite connection exists for the current user and this recipe
+    is_favourited = FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+    
+    context = {
+        "recipe": recipe,
+        "is_favourited": is_favourited,  # Sends the true boolean state to your template
+    }
+    return render(request, "pages/recipe_detail.html", context)
+
+def popular(request):
+    recipes = (
+        Recipe.objects.annotate(favourite_count=Count('favourited_by'))
+        .filter(favourite_count__gt=0)
+        .order_by('-favourite_count', 'name')[:10]
     )
-    
-    # Get comments for this recipe
-    comments = Comment.objects.filter(recipe=recipe)
-    
-    # Get ratings for this recipe
-    ratings = recipe.ratings.all()
-    avg_rating = ratings.aggregate(Avg('stars'))['stars__avg'] or 0
-    avg_rating = round(avg_rating, 1)
-    total_ratings = ratings.count()
-    
-    # Check if current user has already rated
-    user_rating = None
-    if request.user.is_authenticated:
-        user_rating = Rating.objects.filter(user=request.user, recipe=recipe).first()
+    popular_recipes = list(recipes)
+    top_three = popular_recipes[:3]
+    remaining = popular_recipes[3:]
+    max_favourites = popular_recipes[0].favourite_count if popular_recipes else 0
 
-    rating_choices = [1, 2, 3, 4, 5]
-
-    return render(request, 'pages/recipe_detail.html', {
-        'recipe':          recipe,
-        'is_saved':        is_fav,
-        'comments':        comments,
-        'avg_rating':      avg_rating,
-        'total_ratings':   total_ratings,
-        'user_rating':     user_rating,
-        'rating_choices':  rating_choices,
+    return render(request, "pages/popular.html", {
+        "top_three": top_three,
+        "remaining": remaining,
+        "max_favourites": max_favourites,
     })
 
 # ── Add recipe ────────────────────────────────────────────────────────────────
@@ -800,11 +893,55 @@ def feedback_view(request):
 # ── Profile ───────────────────────────────────────────────────────────────────
 @login_required
 def profile(request):
+    # Fetch user favourites 
     favourites = FavouriteRecipe.objects.select_related('recipe').filter(user=request.user)
+    
+    # Fetch user created recipes
+    my_recipes = Recipe.objects.filter(user=request.user)
+    
+    # Build the set of favourited recipe IDs
+    favourited_ids = set(favourites.values_list('recipe_id', flat=True))
+    
     return render(request, 'pages/user_profile.html', {
-        'user':              request.user,
-        'favourites': favourites,
+        'user':           request.user,
+        'favourites':     favourites,
+        'my_recipes':     my_recipes,
+        'favourited_ids': favourited_ids,
     })
+
+# ── Profile Update ────────────────────────────────────────────────────────────
+@login_required
+def profile_update(request):
+    """
+    Handles the profile update form submission. Validates unique username
+    and updates the current user's profile information.
+    """
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+
+        # Validation checks matching signup/login style
+        if not username or not email:
+            messages.error(request, "Username and Email fields cannot be blank.")
+            return redirect('profile')
+
+        # Check if the chosen username is taken by another user
+        if AppUser.objects.filter(username__iexact=username).exclude(pk=request.user.pk).exists():
+            messages.error(request, f"The username '{username}' is already taken.")
+            return redirect('profile')
+
+        try:
+            # Update user instance
+            user = request.user
+            user.username = username
+            user.email = email
+            user.save(update_fields=['username', 'email'])
+            
+            messages.success(request, "Your profile has been successfully updated!")
+        except Exception as e:
+            messages.error(request, f"An error occurred while saving: {str(e)}")
+            
+    return redirect('profile')
 
 # ── Comments API ──────────────────────────────────────────────────────────────
 @csrf_exempt

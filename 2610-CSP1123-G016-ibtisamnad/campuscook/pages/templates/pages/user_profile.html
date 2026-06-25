@@ -44,25 +44,22 @@
 <!-- ── Edit Profile ───────────────────────────────────────────────────────────
      JS only for now — wire to a POST view when backend edit is ready        -->
 <div class="edit-section" id="editSection">
-  <div class="edit-card">
+  <form method="POST" action="{% url 'profile_update' %}" class="edit-card">
+    {% csrf_token %}
     <h3>Edit Profile</h3>
-<!-- wrap in form when profile_update view is ready:
-     <form method="POST" action="/profile/update/">
-     csrf_token goes here                                                 -->
     <div class="edit-row">
-      <label>Name</label>
-      <input type="text" id="editName" value="{{ user.username }}" placeholder="Your name"/>
+      <label for="editName">Username</label>
+      <input type="text" id="editName" name="username" value="{{ user.username }}" placeholder="Your name" required/>
     </div>
     <div class="edit-row">
-      <label>Email</label>
-      <!-- user.email → AbstractUser email field -->
-      <input type="email" id="editEmail" value="{{ user.email }}" placeholder="Your email"/>
+      <label for="editEmail">Email</label>
+      <input type="email" id="editEmail" name="email" value="{{ user.email }}" placeholder="Your email" required/>
     </div>
     <div class="edit-actions">
-      <button class="btn-save" onclick="saveProfile()">Save Changes</button>
-      <button class="btn-cancel" onclick="toggleEdit()">Cancel</button>
+      <button type="submit" class="btn-save">Save Changes</button>
+      <button type="button" class="btn-cancel" onclick="toggleEdit()">Cancel</button>
     </div>
-  </div>
+  </form>
 </div>
 
 <!-- ── Two Column Layout ─────────────────────────────────────────────────────
@@ -73,188 +70,232 @@
      RIGHT → Add a Recipe
              Standalone section — completely separate from favourites
              links to add_recipe page                                       -->
-<div class="main-content">
-  <div class="two-col">
- 
-    <!-- ── LEFT: Favourite Recipes ──────────────────────────────────────────
-         fav.recipe.id   → PK of Recipe via FavouriteRecipe FK
-         fav.recipe.name → name field from Recipe table
-         clicking a card goes to recipe detail page                        -->
-    <section class="profile-section col-left">
-      <div class="col-header">
-        <h2>My Favourites</h2>
-        <a href="{% url 'recipe_list' %}" class="col-link">Browse all →</a>
-      </div>
- 
-      <div class="fav-list">
+<div class = "profile-container">
+  <div class="profile-section col-left">
+  
+    <h2>My Favourite Recipes</h2>
+    {% if favourites %}
+      <div class="fav-grid">
         {% for fav in favourites %}
-          <div
-            class="fav-item"
-            onclick="window.location.href='{% url 'recipe_detail' fav.recipe.id %}'"
-          >
-            <!-- recipe image thumbnail if available -->
-            {% if fav.recipe.image_url %}
-              <img src="{{ fav.recipe.image_url }}" alt="{{ fav.recipe.name }}" class="fav-thumb">
-            {% else %}
-              <div class="fav-thumb fav-thumb-placeholder">🍽️</div>
-            {% endif %}
- 
-            <div class="fav-info">
-              <span class="fav-name">{{ fav.recipe.name }}</span>
-              <div class="fav-meta">
-                <span>⏱ {{ fav.recipe.cooking_time }} mins</span>
-                <span>🔧 {{ fav.recipe.appliance }}</span>
+          <div class="fav-card" id="fav-item-{{ fav.recipe.id }}">
+            
+            <div class="fav-img-wrapper">
+              {% if fav.recipe.image_url %}
+                <img src="{{ fav.recipe.image_url }}" alt="{{ fav.recipe.name }}">
+              {% else %}
+                <span class="fav-placeholder">🍳</span>
+              {% endif %}
+            </div>
+          
+            <div class="fav-card-content">
+              <h4>{{ fav.recipe.name }}</h4>
+              <div class="fav-card-actions">
+                <a href="{% url 'recipe_detail' fav.recipe.id %}" class="cta_primary">View Recipe</a>
+                <button class="btn-unfav-card" onclick="unfavourite(this, {{ fav.recipe.id }})">♥</button>
               </div>
             </div>
-
-            <!-- UNFAVOURITE BUTTON ─────────────────────────────────────────
-                 calls toggle_favourite API (DELETE method)
-                 removes FavouriteRecipe row without page reload            -->
-            <button
-              class="btn-unfav"
-              data-recipe-id="{{ fav.recipe.id }}"
-              onclick="event.stopPropagation(); unfavourite(this, {{ fav.recipe.id }})"
-              title="Remove from favourites"
-            >♥</button>
           </div>
- 
-        {% empty %}
-          <p class="empty-msg">
-            No favourite recipes yet.<br>
-            <a href="{% url 'recipe_list' %}">Browse recipes to add some →</a>
-          </p>
-        {% endfor %}
-      </div>
-    </section>
- 
-    <!-- ── RIGHT: Add a Recipe ──────────────────────────────────────────────
-         Completely separate from favourites — its own section
-         links to add_recipe page                                           -->
-    <section class="profile-section col-right">
-      <div class="col-header">
-        <h2>Add a Recipe</h2>
-      </div>
- 
-      <div class="add-recipe-panel">
-        <div class="add-recipe-icon">🍳</div>
-        <p>Share your own recipe with the Campus Cook community.</p>
-        <a href="{% url 'add_recipe' %}" class="btn-add-recipe">+ Add New Recipe</a>
-      </div>
-    </section>
- 
-  </div>
-</div>
- 
-<div class="toast" id="toast"></div>
 
-<!-- ── Favourites Panel (JS only) ────────────────────────────────────────── -->
-<div class="fav-overlay" id="favOverlay" onclick="closeFavourites()"></div>
-<div class="fav-panel" id="favPanel">
-  <div class="fav-panel-header">
-    <h2>❤️ Favourite Recipes</h2>
-    <button class="fav-close" onclick="closeFavourites()">✕</button>
-  </div>
-  <div id="favContent">
-    <div class="fav-empty" id="favEmpty">
-      <div class="empty-icon">♡</div>
-      <p>No favourites yet.<br/>Tap ♡ on a recipe to save it here.</p>
+      </div>
+      {% endfor %}
     </div>
-    <div class="fav-list" id="favList"></div>
+  {% else %}
+    <p class="empty-msg">No saved recipes yet. <a href="{% url 'recipe_list' %}" style="color: var(--green-dark);">Find recipes →</a></p>
+  {% endif %}
+  </div>
+  <div style="margin-top: 3rem; border-top: 2px dotted var(--tan); padding-top: 2rem;"></div>
+  <div class="profile-section col-right">
+  <h2>My Created Recipes</h2>
+  {% if my_recipes %}
+    <div class="fav-grid">
+      {% for recipe in my_recipes %}
+        <div class="fav-card">
+          <div class="fav-img-wrapper">
+            {% if recipe.image_url %}
+              <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}">
+            {% else %}
+              <span class="fav-placeholder">📖</span>
+            {% endif %}
+          </div>
+          <div class="fav-card-content">
+            <h4>{{ recipe.name }}</h4>
+            <div class="fav-card-actions">
+              <a href="{% url 'recipe_detail' recipe.id %}" class="cta_primary">Manage / View</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty-msg">You haven't uploaded any recipes yet.</p>
+  {% endif %}
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <style>
   .profile-banner { background: #006400; height: 160px; width: 100%; }
-
   .profile-header { max-width: 900px; margin: 0 auto; padding: 0 2rem; position: relative; }
-
   .avatar-wrapper { position: absolute; top: -130px; left: 2rem; }
-
   .avatar {
     width: 110px; height: 110px; border-radius: 50%;
     border: 4px solid #fff; background: #eee;
     display: flex; align-items: center; justify-content: center;
     font-size: 3rem; overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  }
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);}
   .avatar img { width: 100%; height: 100%; object-fit: cover; display: none; }
-
   .avatar-edit-btn {
     position: absolute; bottom: 4px; right: 4px;
     width: 28px; height: 28px;
     background: #7c5cbf; border: 2px solid #fff; border-radius: 50%;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; color: #fff;
-  }
-
+    font-size: 0.7rem; color: #fff;}
   .profile-info-row {
     display: flex; align-items: flex-end;
     justify-content: space-between;
     padding: 1.2rem 0 1rem 140px;
     border-bottom: 2px solid #ddd;
-    flex-wrap: wrap; gap: 0.8rem;
-  }
-
+    flex-wrap: wrap; gap: 0.8rem;}
   .profile-name h1   { font-size: 1.5rem; font-weight: 800; color: #111; }
   .profile-name span { font-size: 0.85rem; color: #888; }
-
   .profile-actions { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
-
   .icon-btn {
     background: none; border: 2px solid #ddd; border-radius: 8px;
     width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center;
     font-size: 1.2rem; cursor: pointer; text-decoration: none; color: inherit;
-    transition: border-color 0.2s, transform 0.15s; position: relative;
-  }
+    transition: border-color 0.2s, transform 0.15s; position: relative;}
   .icon-btn:hover { border-color: #6ac383; transform: scale(1.1); }
-
   .heart-badge {
     position: absolute; top: -6px; right: -6px;
     background: #e05c7a; color: #fff; font-size: 0.6rem; font-weight: 700;
     min-width: 16px; height: 16px; border-radius: 10px; padding: 0 3px;
-    display: none; align-items: center; justify-content: center;
-  }
-
+    display: none; align-items: center; justify-content: center;}
   .btn-edit-profile {
     padding: 0.5rem 1.2rem; background: #96D4AA; color: #fff;
-    border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 700; cursor: pointer;
-  }
+    border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 700; cursor: pointer;}
   .btn-edit-profile:hover { background: #6ac383; }
-
+  /* Favourites Recipe Cards Grid Layout */
+  .fav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;}
+  .fav-card {
+    background: #fff;
+    border: 1.5px solid var(--tan);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(44,37,32,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    position: relative;} 
+  .fav-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(44,37,32,0.1);}
+  .fav-img-wrapper {
+    width: 100%;
+    height: 140px;
+    background: #f7f5f2;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;}
+  .fav-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;}
+  .fav-placeholder {
+    font-size: 2.5rem;}
+  .fav-card-content {
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;}
+  .fav-card-content h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--brown);
+    margin: 0 0 0.8rem 0;
+    line-height: 1.4;}
+  .fav-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;}
+  .fav-card-actions a {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;}
+/* Unfavourite Action Button Wrapper */
+  .btn-unfav-card {
+    background: #fff;
+    color: #e63946;
+    border: 1.5px solid #ffccd5;
+    cursor: pointer;
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s;}
+  .btn-unfav-card:hover {
+    background: #fff5f5;
+    border-color: #e63946;}
   .btn-logout {
     padding: 0.5rem 1rem; background: #fff; color: #333;
     border: 2px solid #333; border-radius: 6px;
-    font-size: 0.82rem; font-weight: 700; cursor: pointer;
-  }
+    font-size: 0.82rem; font-weight: 700; cursor: pointer;}
   .btn-logout:hover { background: #96D4AA; border-color: #96D4AA; color: #fff; }
-
   .edit-section { max-width: 900px; margin: 0 auto; width: 100%; padding: 0 2rem; display: none; }
   .edit-section.open { display: block; padding-top: 1.2rem; }
-
   .edit-card { background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 1.4rem; margin-bottom: 1.2rem; }
   .edit-card h3 { font-size: 0.85rem; font-weight: 700; color: #7c5cbf; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; }
-
   .edit-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem; }
   .edit-row label { width: 80px; font-size: 0.82rem; font-weight: 600; color: #555; flex-shrink: 0; }
   .edit-row input { flex: 1; height: 36px; padding: 0 0.8rem; border: 1.5px solid #ccc; border-radius: 6px; font-size: 0.9rem; color: #111; outline: none; }
   .edit-row input:focus { border-color: #6ac383; }
-
   .edit-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
-
   .btn-save { padding: 0.5rem 1.4rem; background: #96D4AA; color: #fff; border: none; border-radius: 7px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
   .btn-save:hover { background: #6ac383; }
   .btn-cancel { padding: 0.5rem 1rem; background: #fff; color: #555; border: 1.5px solid #ccc; border-radius: 7px; font-size: 0.88rem; cursor: pointer; }
   .btn-cancel:hover { background: #f5f5f5; }
-
   .main-content { max-width: 900px; margin: 0 auto; width: 100%; padding: 1.6rem 2rem 3rem; }
+  .two-col {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;}
+  .col-left { flex: 2; }
+  .col-right { flex: 1; min-width: 280px; }
+  @media (max-width: 768px) {
+    .two-col { flex-direction: column; }
+    .col-left, .col-right { width: 100%; }}
+/* UI Enhancement for Add Recipe Panel */
+  .add-recipe-panel {
+    background: #fafafa;
+    border: 2px dashed #96D4AA;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;}
+  .add-recipe-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .btn-add-recipe {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.6rem 1.2rem;
+    background: #006400;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: bold;
+  }
+  .btn-add-recipe:hover { background: #6ac383; }
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
   .section-header h2 { font-size: 1.2rem; font-weight: 800; color: #111; }
-
   .recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.2rem; }
-
   .recipe-card {
     background: #fff; border: 2px solid #333; border-radius: 12px; height: 150px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -263,11 +304,9 @@
   .recipe-card:hover { box-shadow: 4px 4px 0 #6ac383; transform: translateY(-3px); }
   .recipe-card .card-emoji { font-size: 2.4rem; }
   .recipe-card .card-label { font-size: 0.85rem; font-weight: 600; color: #333; margin-top: 0.5rem; }
-
   .card-heart { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #ccc; transition: color 0.2s, transform 0.15s; }
   .card-heart:hover { transform: scale(1.2); }
   .card-heart.active { color: #e05c7a; }
-
   .add-card {
     border: 2px dashed #bbb; border-radius: 12px; height: 150px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -276,49 +315,140 @@
   .add-card:hover { border-color: #6ac383; color: #6ac383; }
   .add-card .plus { font-size: 2.2rem; font-weight: 300; }
   .add-card span  { font-size: 0.78rem; margin-top: 0.3rem; }
-
   .fav-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200; display: none; opacity: 0; transition: opacity 0.25s; }
   .fav-overlay.open { display: block; opacity: 1; }
-
   .fav-panel { position: fixed; top: 0; right: -380px; width: 340px; height: 100vh; background: #fff; border-left: 2px solid #333; z-index: 201; padding: 1.5rem; transition: right 0.3s ease; overflow-y: auto; display: flex; flex-direction: column; }
   .fav-panel.open { right: 0; }
-
   .fav-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
   .fav-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #555; }
-
   .fav-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: #aaa; text-align: center; gap: 0.8rem; }
   .fav-empty .empty-icon { font-size: 2.5rem; }
-
   .fav-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0; border-bottom: 1px solid #eee; }
   .fav-emoji { font-size: 1.4rem; }
   .fav-name  { flex: 1; font-size: 0.9rem; font-weight: 600; color: #333; }
   .fav-remove { background: none; border: none; cursor: pointer; color: #aaa; font-size: 0.85rem; }
   .fav-remove:hover { color: #e05c7a; }
-
   .toast { position: fixed; bottom: 28px; right: 28px; background: #333; color: #fff; padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
   .toast.show { opacity: 1; transform: none; }
+  /* Two Column Main Content Layout */
+  .profile-container {
+    display: flex;
+    gap: 2.5rem;
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    align-items: flex-start;
+  }
+/* LEFT COLUMN: Favourites Container */
+  .col-left {
+    flex: 2;
+    padding-right: 1.5rem;}
+/* RIGHT COLUMN: Add Recipe Container with Dotted Separation Divider */
+  .col-right {
+    flex: 1;
+    min-width: 290px;
+    padding-left: 2rem;
+    border-left: 2px dotted var(--tan); /* Dotted dividing line */
+    position: sticky;
+    top: 20px;}
+  /* Responsive fallback layout rule for mobile screens */
+  @media (max-width: 768px) {
+    .profile-container {
+      flex-direction: column;
+    }
+  }
+/* Favourites Recipe Grid Cards - Matching Add Recipe Theme Layout Style */
+  .fav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.25rem;}
+
+  .fav-card {
+    background: #fff;
+    border: 2px solid var(--tan); /* Matches Add Recipe border thickness and tone */
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(44,37,32,0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;}
+  .fav-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(44,37,32,0.08);}
+  .fav-img-wrapper {
+    width: 100%;
+    height: 130px;
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;}
+  .fav-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;}
+  .fav-placeholder {
+    font-size: 2.2rem;}
+  .fav-card-content {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    text-align: center; /* Centers layout text just like Add Recipe element layout framework */}
+  .fav-card-content h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--brown);
+    margin: 0 0 1rem 0;}
+  .fav-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: auto;}
+  .fav-card-actions .cta_primary {
+    flex: 1;
+    text-align: center;
+    padding: 0.55rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 8px;}
+  .btn-unfav-card {
+    background: transparent;
+    color: #e63946;
+    border: 1.5px solid #ffccd5;
+    cursor: pointer;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: background 0.2s, border-color 0.2s;}
+  .btn-unfav-card:hover {
+    background: #fff5f5;
+    border-color: #e63946;}
+/* Mobile Layout Collapse */
+  @media (max-width: 768px) {
+    .two-col {
+      flex-direction: column;
+      gap: 2rem;}
+    .col-left, .col-right {
+      width: 100%;
+      padding-left: 0;
+      padding-right: 0;
+      border-left: none;
+    }
+  }
 </style>
 
 <script>
   const favourites = {};
 
-  function toggleFavourite(btn) {
-    const card  = btn.closest('.recipe-card');
-    const name  = card.dataset.name;
-    const emoji = '🍽️';
-    if (favourites[name]) {
-      delete favourites[name];
-      btn.textContent = '♡';
-      btn.classList.remove('active');
-      showToast(`"${name}" removed from favourites`);
-    } else {
-      favourites[name] = { name, emoji };
-      btn.textContent = '♥';
-      btn.classList.add('active');
-      showToast(`"${name}" added to favourites ❤️`);
+  function checkEmptyState() {
+    const list = document.querySelector('.fav-list');
+    if (list && !list.querySelector('.fav-item')) {
+      list.innerHTML = `<p class="empty-msg">No favourite recipes yet.<br>
+        <a href="{% url 'recipe_list' %}">Browse recipes to add some →</a></p>`;
     }
-    updateHeartBadge();
-    renderFavList();
   }
 
   function renderFavList() {
@@ -338,34 +468,37 @@
   // ── Unfavourite from profile page ─────────────────────────────────────────
   // Sends DELETE to toggle_favourite API
   // Removes card from DOM without page reload
+  // ── Cleaned Asynchronous Profile Unfavourite ───────────────────────────────
   async function unfavourite(btn, recipeId) {
     try {
+      // 1. Send the request to your backend API
       const res = await fetch(`/api/toggle-favourite/${recipeId}/`, {
         method:  'DELETE',
         headers: { 'X-CSRFToken': getCookie('csrftoken') },
       });
-      if (!res.ok) throw new Error();
- 
-      // remove the card from the DOM
-      const card = btn.closest('.fav-item');
-      card.style.transition = 'opacity 0.3s';
-      card.style.opacity    = '0';
-      setTimeout(() => {
-        card.remove();
-        // show empty message if no favourites left
-        const list = document.querySelector('.fav-list');
-        if (!list.querySelector('.fav-item')) {
-          list.innerHTML = `<p class="empty-msg">No favourite recipes yet.<br>
-            <a href="{% url 'recipe_list' %}">Browse recipes to add some →</a></p>`;
-        }
-      }, 300);
- 
-      showToast('Removed from favourites');
-    } catch {
-      showToast('Could not remove. Try again.');
+    
+      if (!res.ok) throw new Error("Server error");
+
+      // 2. Target the new grid card element wrapper
+      const card = btn.closest('.fav-card');
+      if (card) {
+        // 3. Trigger the smooth fade out animations
+        card.style.transition = 'all 0.3s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9) translateY(10px)';
+      
+        // 4. Safely remove from the layout window after animation completes
+        setTimeout(() => {
+          card.remove();
+          checkEmptyState(); // Checks if it needs to display "No updates found"
+        }, 300);
+
+        showToast('Removed from favourites');
+      }
+    } catch (err) {
+      showToast('Could not remove item. Please try again.');
     }
   }
-
   function openFavourites()  { document.getElementById('favPanel').classList.add('open'); document.getElementById('favOverlay').classList.add('open'); }
   function closeFavourites() { document.getElementById('favPanel').classList.remove('open'); document.getElementById('favOverlay').classList.remove('open'); }
   function toggleEdit()      { document.getElementById('editSection').classList.toggle('open'); }

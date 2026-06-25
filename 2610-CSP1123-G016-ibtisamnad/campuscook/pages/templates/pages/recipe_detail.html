@@ -35,11 +35,15 @@
                     <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
                     {% endif %}
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_fav {% if is_fav %}btn_fav_active{% endif %}" 
-                        data-recipe-id="{{ recipe.id }}" 
-                        data-fav="{% if is_fav %}true{% else %}false{% endif %}" 
-                        onclick="toggleFav(this)">
-                        {% if is_fav %}♥ Favourited{% else %}♡ Favourite{% endif %}
+                    <button 
+                        class="btn_fav {% if is_favourited %}btn_fav_active{% endif %}" 
+                        id="favBtn"
+                        data-recipe-id="{{ recipe.id }}"
+                        data-fav="{% if is_favourited %}true{% else %}false{% endif %}"
+                        onclick="toggleFav(this)"
+                        title="{% if is_favourited %}Remove from Favourites{% else %}Add to Favourites{% endif %}"
+                        >
+                          {% if is_favourited %}♥ Favourited{% else %}♡ Favourite{% endif %}
                     </button>
                     {% endif %}
                     <button class="btn_action btn_share" 
@@ -270,9 +274,20 @@
     .btn_check:hover { background: #6ac383; color: #fff; }
     .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
     .btn_tomake:hover { background: #e6a817; color: #fff; }
-    .btn_fav    { background: #fff0f5; color: #c0386a; border-color: #e8a0bb; }
+    .btn_fav {
+        background: #ffff;
+        border: 1.5px solid #c0386a;
+        color: #c0386a;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;}
     .btn_fav:hover { background: #c0386a; color: #fff; border-color: #c0386a; }
-    .btn_fav_active { background: #c0386a !important; color: #fff !important; border-color: #c0386a !important; cursor: default; }
+    .btn_fav_active {
+        background: #fff5f5;
+        border-color: #c0386a;
+        color: #c0386a;}
     .btn_fav_active:hover { background: #a02a58 !important; border-color: #a02a58 !important; cursor: default; }
     .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
     .btn_share:hover { background: #6488d4; color: #fff; }
@@ -469,34 +484,44 @@
         }
     }
  
-    // ── Toggle Favourite ──────────────────────────────────────────────────────
+    // ── Toggle Favourite Persistence Client Handler ──────────────────────────────
     async function toggleFav(btn) {
         const recipeId = btn.dataset.recipeId;
-        const isFav    = btn.dataset.fav === 'true';
-        const method   = isFav ? 'DELETE' : 'POST';
- 
+       const isFav    = btn.dataset.fav === 'true';
+    
+        // Switch between POST (add) and DELETE (remove) based on state
+            const method   = isFav ? 'DELETE' : 'POST';
+
         try {
             const res = await fetch(`/api/toggle-favourite/${recipeId}/`, {
-                method,
-                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                method: method,
+                headers: { 
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
             });
-            if (!res.ok) throw new Error();
- 
+            if (!res.ok) throw new Error("Network request failed");
+
             if (isFav) {
+                // Revert back to un-favourited state
                 btn.dataset.fav = 'false';
                 btn.textContent = '♡ Favourite';
                 btn.classList.remove('btn_fav_active');
+                btn.title = 'Add to Favourites';
                 showToast('Removed from favourites', '');
             } else {
+                // Progress to active favourited state
                 btn.dataset.fav = 'true';
                 btn.textContent = '♥ Favourited';
                 btn.classList.add('btn_fav_active');
+                btn.title = 'Remove from Favourites';
                 showToast('Added to favourites ♥', 'success');
             }
-        } catch {
+        } catch (err) {
+            console.error(err);
             showToast('Could not update. Try again.', 'error');
         }
-    }
+    }     
  
     // ── Share Recipe ──────────────────────────────────────────────────────────
     async function shareRecipe(btn) {

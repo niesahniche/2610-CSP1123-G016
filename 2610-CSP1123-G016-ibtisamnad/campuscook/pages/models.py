@@ -88,7 +88,7 @@ class Recipe(models.Model):
     cooking_time = models.IntegerField()
     appliance    = models.CharField(max_length=100)
     instructions = models.TextField()
-    image_url    = models.URLField(max_length=500, null=True, blank=True)
+    image        = models.ImageField(upload_to='recipe_images/', null=True, blank=True)
     # is_halal → whether this recipe is halal (default True)
     is_halal     = models.BooleanField(default=True)
     # budget → estimated cost bracket

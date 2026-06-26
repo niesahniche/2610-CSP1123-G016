@@ -337,13 +337,18 @@ def recipe_filter(request):
 @login_required
 def recipe_detail(request, id):
     recipe = get_object_or_404(Recipe, id=id)
-    
-    # Check if a favorite connection exists for the current user and this recipe
     is_favourited = FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
-    
+    user_rating   = Rating.objects.filter(user=request.user, recipe=recipe).first()
+    comments      = Comment.objects.filter(recipe=recipe)
+
     context = {
-        "recipe": recipe,
-        "is_favourited": is_favourited,  # Sends the true boolean state to your template
+        "recipe":        recipe,
+        "is_favourited": is_favourited,
+        "user_rating":   user_rating,
+        "avg_rating":    recipe.avg_rating or 0,
+        "total_ratings": recipe.ratings.count(),
+        "rating_choices": range(1, 6),
+        "comments":      comments,
     }
     return render(request, "pages/recipe_detail.html", context)
 
@@ -371,7 +376,7 @@ def add_recipe(request):
     custom_ingredients_value = ''
 
     if request.method == 'POST':
-        form = RecipeForm(request.POST)
+        form = RecipeForm(request.POST, request.FILES)
         # handle custom new ingredients typed in the form
         # each gets added to global Ingredient table then linked to the recipe
         custom_raw    = request.POST.get('custom_ingredients', '').strip()
@@ -757,6 +762,8 @@ def verify_2fa(request):
 
         if submitted_code == stored_code:
             # Success — log the user in and clean up session
+            user.is_active = True
+            user.save(update_fields=['is_active'])
             next_url = request.session.get('2fa_next') or settings.LOGIN_REDIRECT_URL
             _clear_2fa_session(request)
             login(request, user)
@@ -814,6 +821,7 @@ def signup_view(request):
             # 1. Save the new user safely to the database
             user = form.save(commit=False)
             user.email = request.POST.get('email', '').strip().lower()
+            user.is_active = False   # locked until they verify the emailed code
             user.save()
             
             # 2. Generate a secure 6-digit verification code
@@ -972,43 +980,6 @@ def get_comments(request, recipe_id):
         for c in comments
     ]
     return JsonResponse(data, safe=False)
-
-# ── Rating API ────────────────────────────────────────────────────────────────
-@csrf_exempt
-@require_http_methods(['POST'])
-def rate_recipe(request, recipe_id):
-    """Add or update a rating for a recipe"""
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-    user = request.user if request.user.is_authenticated else AppUser.objects.first()
-    
-    try:
-        data = json.loads(request.body)
-        stars = int(data.get('stars', 0))
-        
-        if stars < 1 or stars > 5:
-            return JsonResponse({'error': 'Stars must be between 1 and 5'}, status=400)
-        
-        # Create or update rating
-        rating, created = Rating.objects.update_or_create(
-            user=user,
-            recipe=recipe,
-            defaults={'stars': stars}
-        )
-        
-        # Calculate new average
-        avg_rating = recipe.ratings.all().aggregate(Avg('stars'))['stars__avg'] or 0
-        avg_rating = round(avg_rating, 1)
-        total_ratings = recipe.ratings.count()
-        
-        return JsonResponse({
-            'success': True,
-            'stars': stars,
-            'avg_rating': avg_rating,
-            'total_ratings': total_ratings,
-            'created': created,
-        }, status=201 if created else 200)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
 
 @require_http_methods(['GET'])
 def get_recipe_ratings(request, recipe_id):

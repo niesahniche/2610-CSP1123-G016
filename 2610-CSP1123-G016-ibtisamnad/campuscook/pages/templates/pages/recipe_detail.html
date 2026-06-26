@@ -21,7 +21,7 @@
             <!-- recipe image — shown if image_url exists -->
             {% if recipe.image_url %}
                 <div class="detail_image_wrap">
-                    <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" class="detail_image">
+                    <img src="{{ recipe.image.url }}" alt="{{ recipe.name }}" class="detail_image">
                 </div>
             {% endif %}
 
@@ -174,32 +174,6 @@
                 <h2 class="section_title">Instructions 👩‍🍳</h2>
                 <p class="detail_instructions">{{ recipe.instructions }}</p>
             </section>
-
-            <!-- RATING SECTION ──────────────────────────────────────────────
-                 Shows star rating widget. Logged-in users can rate the recipe
-                 user_rating → user's existing rating (if any)               -->
-            {% if user.is_authenticated %}
-            <section class="detail_section">
-                <h2 class="section_title">Leave a Rating ⭐</h2>
-                <div class="rating_widget">
-                    <div class="stars_container">
-                        {% for i in rating_choices %}
-                            <button 
-                                class="star_btn {% if user_rating and user_rating.stars >= i %}active{% endif %}"
-                                data-stars="{{ i }}"
-                                onclick="rateRecipe(this, {{ recipe.id }})"
-                                title="Rate {{ i }} star{{ i|pluralize }}"
-                            >★</button>
-                        {% endfor %}
-                    </div>
-                    {% if user_rating %}
-                        <span class="current_rating">Your rating: {{ user_rating.stars }} ⭐</span>
-                    {% else %}
-                        <span class="current_rating">Not rated yet</span>
-                    {% endif %}
-                </div>
-            </section>
-            {% endif %}
 
             <!-- COMMENTS SECTION ────────────────────────────────────────────
                  Shows all comments on the recipe
@@ -682,11 +656,12 @@ document.querySelectorAll('.star_btn').forEach(btn => {
     btn.addEventListener('mouseleave', () => highlightStars(currentRating));
 });
 
-let currentRating = 0;
+let currentRating = {{ user_rating.stars|default:0 }};
+highlightStars(currentRating);
 
 async function submitRating(stars) {
     try {
-        const res = await fetch(`/api/rate-recipe/{{ recipe.id }}/`, {
+        const res = await fetch(`/api/rate/{{ recipe.id }}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

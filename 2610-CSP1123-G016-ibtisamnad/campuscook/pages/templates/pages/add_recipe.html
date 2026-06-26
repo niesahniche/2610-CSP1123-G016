@@ -9,7 +9,7 @@
     <!-- POST to add_recipe view in views.py
          view creates a new Recipe row in the database
          then redirects to the new recipe's detail page        -->
-    <form method="POST" action="{% url 'add_recipe' %}" class="recipe_form">
+    <form method="POST" action="{% url 'add_recipe' %}" class="recipe_form" enctype="multipart/form-data">
         {% csrf_token %}
 
         <!-- Django form errors -->
@@ -47,16 +47,13 @@
             {% endif %}
         </div>
 
-        <!-- IMAGE URL -->
+        <!-- IMAGE  -->
         <div class="form_group">
-            <label for="id_image_url">Image URL (optional)</label>
-            <input
-                type="url"
-                id="id_image_url"
-                name="image_url"
-                placeholder="https://example.com/image.jpg"
-                value="{{ form.image_url.value|default:'' }}"
-                class="form_input"/>
+            <label for="id_image">Recipe Photo (optional)</label>
+            <input type="file" id="id_image" name="image" accept="image/*" class="form_input"/>
+            {% if form.image.errors %}
+                <ul class="errorlist">{% for error in form.image.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
         </div>
 
         <!-- HALAL — Recipe.is_halal (BooleanField) -->

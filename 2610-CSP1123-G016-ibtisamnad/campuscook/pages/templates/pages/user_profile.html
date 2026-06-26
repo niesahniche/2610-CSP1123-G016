@@ -95,8 +95,6 @@
               </div>
             </div>
           </div>
-
-      </div>
       {% endfor %}
     </div>
   {% else %}
@@ -106,6 +104,10 @@
   <div style="margin-top: 3rem; border-top: 2px dotted var(--tan); padding-top: 2rem;"></div>
   <div class="profile-section col-right">
   <h2>My Created Recipes</h2>
+  <div class="add-recipe-icon">🍳</div>
+    <p>Share your own recipe with the Campus Cook community.</p>
+    <a href="{% url 'add_recipe' %}" class="btn-add-recipe">+ Add New Recipe</a>
+  </div>
   {% if my_recipes %}
     <div class="fav-grid">
       {% for recipe in my_recipes %}
@@ -271,6 +273,12 @@
     align-items: flex-start;}
   .col-left { flex: 2; }
   .col-right { flex: 1; min-width: 280px; }
+  .section-header-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+  .btn-add-recipe {
+    background: var(--green-dark, #2d6a4f); color: #fff; text-decoration: none;
+    padding: 0.45rem 0.9rem; border-radius: 8px; font-size: 0.82rem; font-weight: 700;
+    white-space: nowrap;}
+  .btn-add-recipe:hover { background: var(--green, #6ac383); }}
   @media (max-width: 768px) {
     .two-col { flex-direction: column; }
     .col-left, .col-right { width: 100%; }}

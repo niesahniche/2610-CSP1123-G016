@@ -131,7 +131,7 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'wearecampuscook@gmail.com')
 # Do NOT hardcode it here — if a password was ever committed to this file,
 # treat it as compromised and regenerate a new App Password in your Google
 # Account settings, then revoke the old one.
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'upphdkyttzokufyq')
 
 # Default sender profile fallback
 DEFAULT_FROM_EMAIL = f'CampusCook <{EMAIL_HOST_USER}>'

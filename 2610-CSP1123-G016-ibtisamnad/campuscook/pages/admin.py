@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import AppUser, FavouriteRecipe, Recipe, Ingredient, Grocery, Comment, RecipeFilter, Feedback
+from .models import AppUser, FavouriteRecipe, Recipe, Ingredient, Grocery, Comment, RecipeFilter, Feedback, Rating
 
 # ── AppUser ───────────────────────────────────────────────────────────────────
 @admin.register(AppUser)
@@ -89,4 +89,12 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_display  = ('name', 'email', 'rating', 'created_at')
     list_filter   = ('rating',)
     search_fields = ('name', 'email', 'message')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(Rating)
+class RatingAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe', 'stars', 'created_at')
+    list_filter = ('stars', 'created_at')
+    search_fields = ('user__username', 'recipe__name')
     readonly_fields = ('created_at',)

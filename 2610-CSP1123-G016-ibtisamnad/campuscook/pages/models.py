@@ -195,3 +195,24 @@ class Rating(models.Model):
         if not ratings.exists():
             return None
         return round(sum(r.stars for r in ratings) / ratings.count(), 1)
+
+class WantToTry(models.Model):
+    """Recipes the user has marked with 'To Make' — their cooking bucket list."""
+    user   = models.ForeignKey(
+        'pages.AppUser',
+        on_delete=models.CASCADE,
+        related_name='want_to_try',
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='wanted_by',
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')
+        ordering = ['-added_at']
+
+    def __str__(self):
+        return f"{self.user.username} wants to try {self.recipe.name}"

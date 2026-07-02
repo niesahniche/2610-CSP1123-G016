@@ -1,64 +1,62 @@
 {% extends 'pages/base.html' %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card">
-        <h2>Create Account</h2>
-        <p class="auth-subtitle">Sign up to get started</p>
+<div class="auth-container" style="max-width: 450px; margin: 40px auto; padding: 20px;">
+    <div class="auth-card" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+        <h2 style="color: #004d40; margin-bottom: 5px;">Create Account</h2>
+        <p class="auth-subtitle" style="color: #666; margin-bottom: 25px;">Sign up to get started</p>
 
         <form method="POST" action="{% url 'signup' %}">
             {% csrf_token %}
 
-            <!-- Global Error Banner -->
             {% if form.non_field_errors or messages %}
-                <div class="auth-error-banner" style="background-color: #fce8e6; color: #a51d24; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
-                    Please fix the errors below.
+                <div class="auth-error-banner" style="background-color: #fce8e6; color: #a51d24; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9em;">
+                    <strong>Please fix the errors below:</strong>
                     {% for error in form.non_field_errors %}
-                        <p style="margin: 5px 0 0 0; font-size: 0.9em;">{{ error }}</p>
+                        <p style="margin: 4px 0 0 0;">{{ error }}</p>
+                    {% endfor %}
+                    {% for message in messages %}
+                        <p style="margin: 4px 0 0 0;">{{ message }}</p>
                     {% endfor %}
                 </div>
             {% endif %}
 
-            <!-- Username Field -->
-            <div class="auth-form-group" style="margin-bottom: 15px;">
-                <label for="id_username" style="display: block; font-weight: bold; margin-bottom: 5px; color: #004d40;">USERNAME</label>
-                <input type="text" id="id_username" name="username" value="{{ form.username.value|default:'' }}" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="auth-form-group" style="margin-bottom: 18px;">
+                <label for="id_username" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">USERNAME</label>
+                <input type="text" id="id_username" name="username" value="{{ form.username.value|default:'' }}" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
                 {% if form.username.errors %}
-                    <p style="color: #a51d24; margin: 5px 0; font-size: 0.85em;">{{ form.username.errors.0 }}</p>
+                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.username.errors.0 }}</p>
                 {% endif %}
             </div>
 
-            <!-- Email Address Field -->
-            <div class="auth-form-group" style="margin-bottom: 15px;">
-                <label for="id_email" style="display: block; font-weight: bold; margin-bottom: 5px; color: #004d40;">EMAIL ADDRESS</label>
-                <input type="email" id="id_email" name="email" value="{{ form.email.value|default:'' }}" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="auth-form-group" style="margin-bottom: 18px;">
+                <label for="id_email" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">EMAIL ADDRESS</label>
+                <input type="email" id="id_email" name="email" value="{{ form.email.value|default:'' }}" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
                 {% if form.email.errors %}
-                    <p style="color: #a51d24; margin: 5px 0; font-size: 0.85em;">{{ form.email.errors.0 }}</p>
+                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.email.errors.0 }}</p>
                 {% endif %}
             </div>
 
-            <!-- Password 1 Field -->
-            <div class="auth-form-group" style="margin-bottom: 15px;">
-                <label for="id_password1" style="display: block; font-weight: bold; margin-bottom: 5px; color: #004d40;">PASSWORD</label>
-                <input type="password" id="id_password1" name="password1" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="auth-form-group" style="margin-bottom: 18px;">
+                <label for="id_password1" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">PASSWORD</label>
+                <input type="password" id="id_password1" name="password1" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
                 {% if form.password1.errors %}
-                    <p style="color: #a51d24; margin: 5px 0; font-size: 0.85em;">{{ form.password1.errors.0 }}</p>
+                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.password1.errors.0 }}</p>
                 {% endif %}
             </div>
 
-            <!-- Password 2 Field (Required by Django UserCreationForm) -->
-            <div class="auth-form-group" style="margin-bottom: 20px;">
-                <label for="id_password2" style="display: block; font-weight: bold; margin-bottom: 5px; color: #004d40;">CONFIRM PASSWORD</label>
-                <input type="password" id="id_password2" name="password2" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <div class="auth-form-group" style="margin-bottom: 25px;">
+                <label for="id_password2" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">CONFIRM PASSWORD</label>
+                <input type="password" id="id_password2" name="password2" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
                 {% if form.password2.errors %}
-                    <p style="color: #a51d24; margin: 5px 0; font-size: 0.85em;">{{ form.password2.errors.0 }}</p>
+                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.password2.errors.0 }}</p>
                 {% endif %}
             </div>
 
-            <button type="submit" class="auth-btn" style="width: 100%; padding: 10px; background-color: #5cb85c; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Sign Up</button>
+            <button type="submit" class="auth-btn-submit" style="width: 100%; padding: 12px; background-color: #6ac383; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Sign Up</button>
         </form>
 
-        <p style="margin-top: 15px; text-align: center;">Already have an account? <a href="{% url 'login' %}" style="color: #004d40; font-weight: bold;">Sign In</a></p>
+        <p style="margin-top: 20px; text-align: center; font-size: 0.9em; color: #666;">Already have an account? <a href="{% url 'login' %}" style="color: #004d40; font-weight: bold; text-decoration: none;">Sign In</a></p>
     </div>
 </div>
 

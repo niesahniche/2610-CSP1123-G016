@@ -11,10 +11,21 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import environ
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Initialize environment variables
+env = environ.Env(
+    # set casting and default values
+    EMAIL_USE_TLS=(bool, True)
+)
+
+# Set the project base directory
+# Remove or replace this line:
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Take environment variables from .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -123,7 +134,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 # The explicit address providing verification dispatches
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'wearecampuscook@gmail.com')
+EMAIL_HOST_USER = env('EMAIL_USER', default='wearecampuscook@gmail.com')
 
 # IMPORTANT: This must be a 16-character Google App Password, NOT your regular password!
 # Set EMAIL_HOST_PASSWORD as an environment variable (e.g. in a local .env file
@@ -131,7 +142,7 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'wearecampuscook@gmail.com')
 # Do NOT hardcode it here — if a password was ever committed to this file,
 # treat it as compromised and regenerate a new App Password in your Google
 # Account settings, then revoke the old one.
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_PASSWORD = env('EMAIL_PASSWORD', default='')
 
 # Default sender profile fallback
 DEFAULT_FROM_EMAIL = f'CampusCook <{EMAIL_HOST_USER}>'

@@ -30,6 +30,12 @@
 
     <div class="profile-actions">
       <a href="{% url 'grocery' %}" class="icon-btn" title="My Grocery List">🧺</a>
+        <a href="{% url 'want_to_try' %}" class="icon-btn" title="Recipes I Want to Try">
+          🍳
+          {% if wtt_count %}
+            <span class="heart-badge" style="display:flex;">{{ wtt_count }}</span>
+          {% endif %}
+        </a>
       <button class="btn-edit-profile" onclick="toggleEdit()">✏️ Edit Profile</button>
 
       <!-- LOGOUT — must be POST to be secure (Django requires POST for logout) -->

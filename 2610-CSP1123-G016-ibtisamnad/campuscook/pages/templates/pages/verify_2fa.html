@@ -1,35 +1,47 @@
 {% extends 'pages/base.html' %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card">
-        <h2>Two-Factor Verification</h2>
-        <p class="auth-subtitle">We have sent a verification code to your masked email: <strong>{{ masked_email }}</strong></p>[cite: 8]
+<div class="auth-container" style="max-width: 450px; margin: 40px auto; padding: 20px;">
+    <div class="auth-card" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
+        <h2 style="color: #004d40; margin-bottom: 5px;">Verify Your Identity</h2>
+        <p class="auth-subtitle" style="color: #666; margin-bottom: 25px;">We sent a 6-digit verification code to <br><strong style="color: #333;">{{ masked_email }}</strong></p>
 
-        <form method="POST" action="{% url 'verify_2fa' %}">[cite: 7, 8]
+        <form method="POST" action="{% url 'verify_2fa' %}">
             {% csrf_token %}
 
             {% if messages %}
-                <div class="auth-error-banner" style="background-color: #fce8e6; color: #a51d24; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
-                    {% for msg in messages %}
-                        <p style="margin: 0; font-size: 0.9em;">{{ msg }}</p>[cite: 8]
+                <div class="auth-error-banner" style="background-color: #fce8e6; color: #a51d24; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9em; text-align: left;">
+                    {% for message in messages %}
+                        <p style="margin: 0;">{{ message }}</p>
                     {% endfor %}
                 </div>
             {% endif %}
 
-            <div class="auth-form-group" style="margin-bottom: 20px;">
-                <label for="id_code" style="display: block; font-weight: bold; margin-bottom: 5px; color: #004d40;">ENTER 6-DIGIT CODE</label>
-                <input type="text" id="id_code" name="code" maxlength="6" pattern="\d{6}" required placeholder="000000" style="width: 100%; padding: 10px; font-size: 1.2em; text-align: center; letter-spacing: 5px; border: 1px solid #ccc; border-radius: 4px;">[cite: 8]
+            <div class="auth-form-group" style="margin-bottom: 25px;">
+                <label for="id_code" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 10px; color: #004d40; letter-spacing: 0.5px;">ENTER 6-DIGIT CODE</label>
+                <input
+                    type="text"
+                    id="id_code"
+                    name="code"
+                    maxlength="6"
+                    pattern="\d{6}"
+                    required
+                    placeholder="000000"
+                    autocomplete="one-time-code"
+                    inputmode="numeric"
+                    style="width: 100%; padding: 12px; font-size: 1.6rem; text-align: center; letter-spacing: 6px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box; background-color: #fafafa; font-weight: bold; outline: none;"
+                    autofocus
+                />
             </div>
 
-            <button type="submit" class="auth-btn" style="width: 100%; padding: 10px; background-color: #5cb85c; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Verify & Log In</button>[cite: 8]
+            <button type="submit" class="auth-btn-submit" style="width: 100%; padding: 12px; background-color: #6ac383; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Verify & Complete Registration</button>
         </form>
 
-        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+        <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
 
-        <p style="text-align: center; font-size: 0.9em;">
-            Didn't receive the code? 
-            <a href="{% url 'resend_2fa' %}" style="color: #004d40; font-weight: bold; text-decoration: none;">Resend Code</a>[cite: 7, 8]
+        <p style="font-size: 0.9em; color: #666;">
+            Didn't receive a code? 
+            <a href="{% url 'resend_2fa' %}" style="color: #004d40; font-weight: bold; text-decoration: none;">Resend Code</a>
         </p>
     </div>
 </div>

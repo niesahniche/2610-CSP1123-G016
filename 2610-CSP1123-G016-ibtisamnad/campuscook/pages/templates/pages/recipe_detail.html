@@ -411,20 +411,18 @@
             </button>`;
  
         document.getElementById('popupContent').innerHTML = `
-            <div class="popup-icon">${data.can_cook ? '🎉' : '🛒'}</div>
-            <div class="popup-title">
-                ${data.can_cook ? 'You have everything!' : 'Some ingredients missing'}
-            </div>
+            <div class="popup-icon">✅</div>
+            <div class="popup-title">Grocery list updated!</div>
             <div class="popup-msg">
                 ${data.can_cook
-                    ? `You can make <strong>${data.recipe}</strong> with what you have.`
-                    : `You're missing some ingredients for <strong>${data.recipe}</strong>.`}
+                    ? `All ingredients for <strong>${data.recipe}</strong> are in your grocery list.`
+                    : `<strong>${data.added_missing.length}</strong> missing ingredient(s) added to your grocery list.`}
+                <br><small style="color:#2d6a4f;">✓ Saved to your <a href="/want-to-try/" style="color:#2d6a4f;font-weight:700;">Want to Try</a> list!</small>
             </div>
-            ${availableHtml}
-            ${missingHtml}
-            ${step2Btn}
+            <a href="/grocery/" class="popup-btn">View Grocery List</a>
+            <a href="/want-to-try/" class="popup-btn secondary">View Want to Try →</a>
             <button class="popup-btn secondary" onclick="closePopup()">Close</button>
-        `;
+`       ;
  
         openPopup();
     }
@@ -576,28 +574,27 @@
 
     // ── Submit Comment ────────────────────────────────────────────────────────
     async function submitComment(event, recipeId) {
-        event.preventDefault();
-        
-        const textarea = document.getElementById('commentInput');
-        const comment = textarea.value.trim();
-        
-        if (!comment) {
-            showToast('Comment cannot be empty', 'error');
-            return;
+    event.preventDefault();
+    const textarea = document.getElementById('commentInput');
+    const comment = textarea.value.trim();
+    if (!comment) {
+        showToast('Comment cannot be empty', 'error');
+        return;
+    }
+    try {
+        const res = await fetch(`/api/add-comment/${recipeId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ comment }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            console.error('Comment failed:', data);
+            throw new Error(data.error || `HTTP ${res.status}`);
         }
-        
-        try {
-            const res = await fetch(`/api/add-comment/${recipeId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken'),
-                },
-                body: JSON.stringify({ comment }),
-            });
-            if (!res.ok) throw new Error();
-            
-            const data = await res.json();
             
             // Clear textarea
             textarea.value = '';
@@ -623,7 +620,7 @@
             commentsList.insertAdjacentHTML('afterbegin', newComment);
             showToast('Comment posted! 💬', 'success');
         } catch (e) {
-            showToast('Could not post comment. Try again.', 'error');
+            showToast(e.message || 'Could not post comment. Try again.', 'error');
         }
     }
 

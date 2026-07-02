@@ -16,7 +16,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating
+from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating, WantToTry
 
 def merge_recipe_labels(existing_label, new_label):
     labels = []
@@ -541,13 +541,18 @@ def to_make(request, recipe_id):
                 for_recipe=recipe.name,
             )
             added.append(ing.name)
+
+    # ── save to WantToTry bucket list (ignore if already saved) ──────────
+    if user.is_authenticated:
+        WantToTry.objects.get_or_create(user=user, recipe=recipe)
  
     return JsonResponse({
-        'can_cook':  missing.count() == 0,
+        'can_cook':  len(missing) == 0,
         'available': [g.name for g in available],
         'missing':   [g.name for g in missing],
         'added':     added,
         'recipe':    recipe.name,
+        'want_to_try_saved': True,
     })
 
 # ── Favourite recipes page ────────────────────────────────────────────────────────
@@ -589,7 +594,23 @@ def toggle_favourite(request, recipe_id):
     FavouriteRecipe.objects.filter(user=user, recipe=recipe).delete()
     return JsonResponse({'favourited': False})
  
- 
+ # ── Want to Try API — toggle (POST = add, DELETE = remove) ───────────────────
+@csrf_exempt
+@require_http_methods(['POST', 'DELETE'])
+def toggle_want_to_try(request, recipe_id):
+    recipe = get_object_or_404(Recipe, id=recipe_id)
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Login required'}, status=401)
+    user = request.user
+
+    if request.method == 'POST':
+        obj, created = WantToTry.objects.get_or_create(user=user, recipe=recipe)
+        return JsonResponse({'saved': True, 'created': created}, status=201 if created else 200)
+
+    # DELETE — remove from list
+    WantToTry.objects.filter(user=user, recipe=recipe).delete()
+    return JsonResponse({'saved': False})
+
 # ── Ingredient check API — Step 1: returns available/missing lists ────────────
 # Called from recipe detail page when user clicks "Check Ingredients"
 # Does NOT add anything to grocery yet — just returns the data for Step 1
@@ -727,79 +748,70 @@ def login_view(request):
 
 # ── Step 2: verify the emailed code ──────────────────────────────────────────
 def verify_2fa(request):
-    """
-    Shows the code entry form (GET) and validates the submitted code (POST).
-    Requires that login_view has already stored 2fa_user_id in the session.
-    """
-    # Guard: must have started 2FA flow
-    if '2fa_user_id' not in request.session:
+    # Fetch pending credentials context
+    user_id = request.session.get('2fa_user_id')
+    saved_code = request.session.get('2fa_code')
+    expiry_str = request.session.get('2fa_expires')
+    next_url = request.session.get('2fa_next', 'home')
+    
+    if not user_id or not saved_code:
+        messages.error(request, "No pending authentication profile session found.")
         return redirect('login')
-
-    user_id = request.session['2fa_user_id']
-
+        
     try:
         user = AppUser.objects.get(pk=user_id)
     except AppUser.DoesNotExist:
         return redirect('login')
-
+        
+    # Mask target output string (e.g., h****h@gmail.com)
+    email = user.email or ""
+    if "@" in email:
+        local, domain = email.split("@", 1)
+        masked_local = local[0] + "*" * (len(local) - 2) + local[-1] if len(local) > 2 else local + "**"
+        masked_email = f"{masked_local}@{domain}"
+    else:
+        masked_email = "your registered email profile"
+        
     if request.method == 'POST':
-        submitted_code = request.POST.get('code', '').strip()
-        stored_code    = request.session.get('2fa_code', '')
-        expires_str    = request.session.get('2fa_expires', '')
-
-        # Check expiry
-        expired = False
-        if expires_str:
-            from django.utils.dateparse import parse_datetime
-            expires_at = parse_datetime(expires_str)
-            if expires_at and timezone.now() > expires_at:
-                expired = True
-
-        if expired:
-            messages.error(request, 'Your code has expired. Please log in again.')
-            _clear_2fa_session(request)
-            return redirect('login')
-
-        if submitted_code == stored_code:
-            # Success — log the user in and clean up session
-            user.is_active = True
+        input_code = request.POST.get('code', '').strip()
+        
+        # Verify expiration timestamps
+        if expiry_str and timezone.now().isoformat() > expiry_str:
+            messages.error(request, "Verification code has expired. Please request a new token code.")
+            return render(request, 'pages/verify_2fa.html', {'masked_email': masked_email})
+            
+        if input_code == saved_code:
+            user.is_active = True                   # activate the account
             user.save(update_fields=['is_active'])
-            next_url = request.session.get('2fa_next') or settings.LOGIN_REDIRECT_URL
-            _clear_2fa_session(request)
             login(request, user)
+            for key in ['2fa_user_id', '2fa_code', '2fa_expires', '2fa_next']:
+                request.session.pop(key, None)
+            messages.success(request, "Identity confirmed! Welcome to CampusCook.")
             return redirect(next_url)
         else:
-            messages.error(request, 'Incorrect code. Please try again.')
-
-    return render(request, 'pages/verify_2fa.html', {
-        'masked_email': _mask_email(user.email),
-    })
-
+            messages.error(request, "Invalid verification code sequence. Please check and retry.")
+            
+    return render(request, 'pages/verify_2fa.html', {'masked_email': masked_email})
 
 # ── Resend the 2FA code ───────────────────────────────────────────────────────
 def resend_2fa(request):
-    """Generates a fresh code and re-sends it, then redirects back to verify."""
-    if '2fa_user_id' not in request.session:
+    user_id = request.session.get('2fa_user_id')
+    if not user_id:
+        messages.error(request, "No verification structure active.")
         return redirect('login')
-
-    user_id = request.session['2fa_user_id']
-    try:
-        user = AppUser.objects.get(pk=user_id)
-    except AppUser.DoesNotExist:
-        return redirect('login')
-
+        
+    user = AppUser.objects.get(pk=user_id)
     code = _generate_2fa_code()
-    request.session['2fa_code']    = code
-    request.session['2fa_expires'] = (
-        timezone.now() + timedelta(minutes=10)
-    ).isoformat()
-
+    
+    request.session['2fa_code'] = code
+    request.session['2fa_expires'] = (timezone.now() + timedelta(minutes=10)).isoformat()
+    
     try:
         _send_2fa_email(user.email, code)
-        messages.success(request, 'A new code has been sent to your email.')
+        messages.success(request, "A new validation passkey token code has been issued to your inbox.")
     except Exception:
-        messages.error(request, 'Could not send email. Please try again.')
-
+        messages.error(request, "Failed to connect to email distribution relays.")
+        
     return redirect('verify_2fa')
 
 
@@ -808,8 +820,6 @@ def _clear_2fa_session(request):
     for key in ('2fa_user_id', '2fa_code', '2fa_expires', '2fa_next'):
         request.session.pop(key, None)
 
-
-# ── Signup ────────────────────────────────────────────────────────────────────
 # ── Signup ────────────────────────────────────────────────────────────────────
 def signup_view(request):
     if request.user.is_authenticated:
@@ -818,33 +828,33 @@ def signup_view(request):
     if request.method == 'POST':
         form = AppUserCreationForm(request.POST)
         if form.is_valid():
-            # 1. Save the new user safely to the database
+            # Save account to DB first so an account structure exists
             user = form.save(commit=False)
             user.email = request.POST.get('email', '').strip().lower()
-            user.is_active = False   # locked until they verify the emailed code
+            user.is_active = False          # locked until they enter the code
             user.save()
             
-            # 2. Generate a secure 6-digit verification code
+            # Setup code challenge
             code = _generate_2fa_code()
             
-            # 3. Store validation profiles inside the session data store
-            request.session['2fa_user_id']  = user.pk
-            request.session['2fa_code']     = code
-            request.session['2fa_expires']  = (timezone.now() + timedelta(minutes=10)).isoformat()
-            request.session['2fa_next']     = 'home'
+            # Write state trackers to transient browser session storage
+            request.session['2fa_user_id'] = user.pk
+            request.session['2fa_code']    = code
+            request.session['2fa_expires'] = (timezone.now() + timedelta(minutes=10)).isoformat()
+            request.session['2fa_next']    = 'home'
             
-            # 4. Dispatch verification credentials to the inbox
             try:
                 _send_2fa_email(user.email, code)
-            except Exception:
-                messages.error(request, 'Account created, but we could not send your verification email. Please try logging in to retry.')
+            except Exception as e:
+                # Fallback safeguard in case SMTP values are rejecting connection
+                print("❌ SMTP EMAIL ERROR:", str(e))  # <-- ADD THIS TEMPORARILY
+                messages.error(request, f"Profile created, but mail configuration dropped connection. Please sign in to re-request authorization code.")
                 return redirect('login')
                 
-            # 5. Redirect straight to your verification terminal
-            messages.success(request, "Account created successfully! Please check your email for your verification code.")
+            messages.success(request, "Account initialization complete! Please check your email to complete authorization.")
             return redirect('verify_2fa')
         else:
-            messages.error(request, "Please fix the errors below.")
+            messages.error(request, "Registration rejected. Please address highlighted issues.")
     else:
         form = AppUserCreationForm()
         
@@ -890,12 +900,15 @@ def profile(request):
     
     # Build the set of favourited recipe IDs
     favourited_ids = set(favourites.values_list('recipe_id', flat=True))
+
+    wtt_count      = WantToTry.objects.filter(user=request.user).count()
     
     return render(request, 'pages/user_profile.html', {
         'user':           request.user,
         'favourites':     favourites,
         'my_recipes':     my_recipes,
         'favourited_ids': favourited_ids,
+        'wtt_count':      wtt_count,
     })
 
 # ── Profile Update ────────────────────────────────────────────────────────────
@@ -931,6 +944,12 @@ def profile_update(request):
             messages.error(request, f"An error occurred while saving: {str(e)}")
             
     return redirect('profile')
+
+# ── Want To Try page ──────────────────────────────────────────────────────────
+@login_required
+def want_to_try_page(request):
+    entries = WantToTry.objects.select_related('recipe').filter(user=request.user)
+    return render(request, 'pages/want_to_try.html', {'want_to_try': entries})
 
 # ── Comments API ──────────────────────────────────────────────────────────────
 @csrf_exempt

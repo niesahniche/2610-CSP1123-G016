@@ -35,6 +35,8 @@ urlpatterns = [
     # ── Favourite API ─────────────────────────────────────────────────────────
     path("api/toggle-favourite/<int:recipe_id>/", views.toggle_favourite, name="toggle_favourite"),
     path("api/favourites/",                       views.favourite_recipe_list, name="favourite_recipe_list"),
+    path("api/toggle-want-to-try/<int:recipe_id>/", views.toggle_want_to_try, name="toggle_want_to_try"),
+    path("want-to-try/", views.want_to_try_page, name="want_to_try"),
 
     # ── Ingredient check/add APIs ─────────────────────────────────────────────
     path("api/check-ingredients/<int:recipe_id>/",      views.check_ingredients,        name="check_ingredients"),

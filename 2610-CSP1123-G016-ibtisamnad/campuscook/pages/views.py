@@ -65,6 +65,42 @@ def aggregate_grocery_items(items):
         entry['for_recipe'] = ', '.join(dict.fromkeys(entry['for_recipe']))
     return list(grouped.values())
 
+
+def get_completed_recipe_names(user):
+    labelled_groceries = (
+        Grocery.objects.filter(user=user)
+        .exclude(for_recipe__isnull=True)
+        .exclude(for_recipe__exact='')
+    )
+    recipe_labels = list(dict.fromkeys(
+        label.strip()
+        for item in labelled_groceries
+        for label in item.for_recipe.split(',')
+        if label.strip()
+    ))
+    if not recipe_labels:
+        return []
+
+    available_names = {
+        name.strip().lower()
+        for name in Grocery.objects.filter(user=user, status='available')
+        .values_list('name', flat=True)
+        if name and name.strip()
+    }
+    completed_names = set()
+    recipes = Recipe.objects.filter(name__in=recipe_labels).prefetch_related('ingredients')
+
+    for recipe in recipes:
+        ingredient_names = {
+            ingredient.name.strip().lower()
+            for ingredient in recipe.ingredients.all()
+            if ingredient.name and ingredient.name.strip()
+        }
+        if ingredient_names.issubset(available_names):
+            completed_names.add(recipe.name)
+
+    return [recipe_name for recipe_name in recipe_labels if recipe_name in completed_names]
+
 # ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
     return render(request, "pages/home.html")
@@ -174,23 +210,9 @@ def grocery(request):
     missing = Grocery.objects.filter(user=user, status='missing')
     purchased = Grocery.objects.filter(user=user, status='purchased')
 
-    # Determine recipe completion only from groceries labelled with recipe names.
-    # A recipe should appear in "Now I can cook" only when every linked grocery row
-    # for that recipe is currently marked as available.
-    recipe_label_map = {}
-    labelled_groceries = Grocery.objects.filter(user=user).exclude(for_recipe__isnull=True).exclude(for_recipe__exact='')
-    for item in labelled_groceries:
-        for label in [label.strip() for label in item.for_recipe.split(',') if label.strip()]:
-            recipe_label_map.setdefault(label, []).append(item)
-
-    completed_recipes = [
-        recipe_name
-        for recipe_name, items in recipe_label_map.items()
-        if items and all(
-            item.status == 'available' and item.name and item.name.strip()
-            for item in items
-        )
-    ]
+    # Re-check actual recipe ingredients against the current available list so
+    # stale labels do not keep a recipe in "Now I can cook".
+    completed_recipes = get_completed_recipe_names(user)
 
     available = aggregate_grocery_items(available_qs)
     
@@ -485,6 +507,7 @@ def delete_recipe(request, recipe_id):
 
 # ── Rate recipe API ───────────────────────────────────────────────────────────
 # POST → creates or updates a Rating row
+# Only users who did NOT create the recipe can rate it
 @csrf_exempt
 @require_http_methods(['POST'])
 def rate_recipe(request, recipe_id):
@@ -493,6 +516,8 @@ def rate_recipe(request, recipe_id):
 
     if not user:
         return JsonResponse({'error': 'Login required'}, status=401)
+    if recipe.user == user:
+        return JsonResponse({'error': 'Cannot rate your own recipe'}, status=403)
 
     body  = json.loads(request.body)
     stars = int(body.get('stars', 0))

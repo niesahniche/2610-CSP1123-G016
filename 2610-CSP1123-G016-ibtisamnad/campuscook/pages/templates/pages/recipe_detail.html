@@ -432,21 +432,22 @@
             >
                 ${data.can_cook
                     ? '✅ Add available ingredients to grocery list'
-                    : '🛒 Add all to grocery list (missing items flagged)'}
+                    : '🛒 Add all to grocery list'}
             </button>`;
  
         document.getElementById('popupContent').innerHTML = `
-            <div class="popup-icon">✅</div>
-            <div class="popup-title">Grocery list updated!</div>
+            <div class="popup-icon">🕵️‍♂️</div>
+            <div class="popup-title">Ingredient Check</div>
             <div class="popup-msg">
-                ${data.can_cook
-                    ? `All ingredients for <strong>${data.recipe}</strong> are in your grocery list.`
-                    : `<strong>${data.added_missing.length}</strong> missing ingredient(s) added to your grocery list.`}
+                ${data.can_cook 
+                    ? `You have all required ingredients to cook <strong>${data.recipe || ''}</strong>!` 
+                    : `You are missing some ingredients for <strong>${data.recipe || ''}</strong>.`}
             </div>
-            <a href="/grocery/" class="popup-btn">View Grocery List</a>
-            <a href="/want-to-try/" class="popup-btn secondary">View Want to Try →</a>
+            ${availableHtml}
+            ${missingHtml}
+            ${step2Btn}
             <button class="popup-btn secondary" onclick="closePopup()">Close</button>
-`       ;
+        `;
  
         openPopup();
     }

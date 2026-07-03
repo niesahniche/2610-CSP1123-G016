@@ -359,7 +359,7 @@ function showStep1Popup(data) {
         ${availableHtml}
         ${missingHtml}
         <button class="popup-btn" onclick="step2AddToGrocery(${data.recipe_id})">
-            ${data.can_cook ? '✅ Add to grocery list' : '🛒 Add all to grocery list (missing flagged)'}
+            ${data.can_cook ? '✅ Add to grocery list' : '🛒 Add all to grocery list'}
         </button>
         <button class="popup-btn secondary" onclick="closePopup()">Close</button>
     `;

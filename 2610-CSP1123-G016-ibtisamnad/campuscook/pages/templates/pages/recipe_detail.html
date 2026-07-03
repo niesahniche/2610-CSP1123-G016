@@ -111,9 +111,9 @@
             </div>
 
             <!-- STAR RATING ─────────────────────────────────────────────────────────────
-            Only shown to logged-in users who did not create this recipe
+            Available to every logged-in user, including the recipe creator
             Submits to rate_recipe API → creates/updates Rating row               -->
-            {% if user.is_authenticated and recipe.user != user %}
+            {% if user.is_authenticated %}
             <div class="rating_widget" id="ratingWidget">
                 <span class="rating_label">Rate this recipe:</span>
                 <div class="stars" id="starRow">

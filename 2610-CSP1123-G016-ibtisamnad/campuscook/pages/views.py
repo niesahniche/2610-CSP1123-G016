@@ -174,23 +174,22 @@ def grocery(request):
     missing = Grocery.objects.filter(user=user, status='missing')
     purchased = Grocery.objects.filter(user=user, status='purchased')
 
-    available_names = {
-        name.strip().lower()
-        for name in available_qs.values_list('name', flat=True)
-        if name
-    }
-
-    # Determine recipe completion only from groceries labelled with recipe names
+    # Determine recipe completion only from groceries labelled with recipe names.
+    # A recipe should appear in "Now I can cook" only when every linked grocery row
+    # for that recipe is currently marked as available.
     recipe_label_map = {}
     labelled_groceries = Grocery.objects.filter(user=user).exclude(for_recipe__isnull=True).exclude(for_recipe__exact='')
     for item in labelled_groceries:
         for label in [label.strip() for label in item.for_recipe.split(',') if label.strip()]:
-            recipe_label_map.setdefault(label, set()).add(item.name.strip().lower())
+            recipe_label_map.setdefault(label, []).append(item)
 
     completed_recipes = [
         recipe_name
-        for recipe_name, labelled_names in recipe_label_map.items()
-        if labelled_names and labelled_names.issubset(available_names)
+        for recipe_name, items in recipe_label_map.items()
+        if items and all(
+            item.status == 'available' and item.name and item.name.strip()
+            for item in items
+        )
     ]
 
     available = aggregate_grocery_items(available_qs)
@@ -486,7 +485,6 @@ def delete_recipe(request, recipe_id):
 
 # ── Rate recipe API ───────────────────────────────────────────────────────────
 # POST → creates or updates a Rating row
-# Only users who did NOT create the recipe can rate it
 @csrf_exempt
 @require_http_methods(['POST'])
 def rate_recipe(request, recipe_id):
@@ -495,8 +493,6 @@ def rate_recipe(request, recipe_id):
 
     if not user:
         return JsonResponse({'error': 'Login required'}, status=401)
-    if recipe.user == user:
-        return JsonResponse({'error': 'Cannot rate your own recipe'}, status=403)
 
     body  = json.loads(request.body)
     stars = int(body.get('stars', 0))

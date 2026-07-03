@@ -293,8 +293,13 @@ def recipe_list(request):
             FavouriteRecipe.objects.filter(user=request.user)
             .values_list('recipe_id', flat=True)
         )
+        want_to_try_ids = set(
+            WantToTry.objects.filter(user=request.user)
+            .values_list('recipe_id', flat=True)
+        )
     else:
         favourited_ids = set()
+        want_to_try_ids = set()
 
     # 5. Process Pagination Blocks Securely
     paginator = Paginator(recipes, 6)
@@ -309,6 +314,7 @@ def recipe_list(request):
         user_name = recipe.user.username if recipe.user else "Anonymous"
         
         is_favourited = recipe.id in favourited_ids
+        is_want_to_try = recipe.id in want_to_try_ids
         
         recipes_with_info.append({
             'recipe': recipe,
@@ -317,6 +323,7 @@ def recipe_list(request):
             'total_ratings': total_ratings,
             'creator': user_name,
             'is_favourited': is_favourited,
+            'is_want_to_try': is_want_to_try,
         })
 
     # 7. Render Template with Data Maps
@@ -382,13 +389,15 @@ def recipe_filter(request):
 @login_required
 def recipe_detail(request, id):
     recipe = get_object_or_404(Recipe, id=id)
-    is_favourited = FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+    is_favourited  = FavouriteRecipe.objects.filter(user=request.user, recipe=recipe).exists()
+    is_want_to_try = WantToTry.objects.filter(user=request.user, recipe=recipe).exists()
     user_rating   = Rating.objects.filter(user=request.user, recipe=recipe).first()
     comments      = Comment.objects.filter(recipe=recipe)
 
     context = {
         "recipe":        recipe,
         "is_favourited": is_favourited,
+        "is_want_to_try": is_want_to_try,
         "user_rating":   user_rating,
         "avg_rating":    recipe.avg_rating or 0,
         "total_ratings": recipe.ratings.count(),
@@ -594,15 +603,8 @@ def to_make(request, recipe_id):
             name=ing.name,
             status='missing',
             for_recipe=recipe.name
-        ).exists()
-        if not already_missing:
-            Grocery.objects.create(
-                user=user,
-                name=ing.name,
-                status='missing',
-                for_recipe=recipe.name,
-            )
-            added.append(ing.name)
+        )
+        added.append(ing.name)
 
     # ── save to WantToTry bucket list (ignore if already saved) ──────────
     if user.is_authenticated:
@@ -904,8 +906,17 @@ def _clear_2fa_session(request):
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect('home')
-        
+
     if request.method == 'POST':
+        # Clear out any abandoned, never-verified signup attempt that used this
+        # same email — otherwise a missed/expired code permanently locks the
+        # email out (AppUserCreationForm.clean_email only blocks ACTIVE accounts,
+        # but the old, never-activated row would still collide on username/email
+        # at the database level unless it's removed first).
+        submitted_email = request.POST.get('email', '').strip().lower()
+        if submitted_email:
+            AppUser.objects.filter(email__iexact=submitted_email, is_active=False).delete()
+
         form = AppUserCreationForm(request.POST)
         if form.is_valid():
             # Save account to DB first so an account structure exists
@@ -926,10 +937,13 @@ def signup_view(request):
             try:
                 _send_2fa_email(user.email, code)
             except Exception as e:
-                # Fallback safeguard in case SMTP values are rejecting connection
+                # Fallback safeguard in case SMTP values are rejecting connection.
+                # Session is already set up above, so send them straight to the
+                # verify page (not login, which would just dead-end on an
+                # inactive account) where "Resend Code" can retry the email.
                 print("❌ SMTP EMAIL ERROR:", str(e))  # <-- ADD THIS TEMPORARILY
-                messages.error(request, f"Profile created, but mail configuration dropped connection. Please sign in to re-request authorization code.")
-                return redirect('login')
+                messages.error(request, "Account created, but the confirmation email couldn't be sent. Tap \"Resend Code\" to try again.")
+                return redirect('verify_2fa')
                 
             messages.success(request, "Account initialization complete! Please check your email to complete authorization.")
             return redirect('verify_2fa')
@@ -1029,7 +1043,7 @@ def profile_update(request):
 @login_required
 def want_to_try_page(request):
     entries = WantToTry.objects.select_related('recipe').filter(user=request.user)
-    return render(request, 'pages/want_to_try.html', {'want_to_try': entries})
+    return render(request, 'pages/wanttotry.html', {'want_to_try': entries})
 
 # ── Comments API ──────────────────────────────────────────────────────────────
 @csrf_exempt

@@ -1,7 +1,3 @@
-<!--- hardcode only the layout and let the details appear later once database and id for recipes are given-->
-<!--- need : title, description, ingredients, time, cost/budget, instructions, appliances used, rating -->
-<!--- cannot be fully hardcoded as it needs recipe.id (Primary key) to show specific details -->
-<!--- have not been linked yet as data is not proper (no primary key in hardcoded recipe_list) -->
 {% extends 'pages/base.html' %}
 
 {% block content %}
@@ -32,7 +28,13 @@
                 <h1 class="detail_title">{{ recipe.name }}</h1>
                 <div class="detail_actions">
                     {% if user.is_authenticated %}
-                    <button class="btn_action btn_tomake" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" onclick="step1CheckIngredients(this)">🍳 To Make</button>
+                    <button
+                        class="btn_action btn_tomake {% if is_want_to_try %}btn_tomake_active{% endif %}"
+                        data-recipe-id="{{ recipe.id }}"
+                        data-recipe-name="{{ recipe.name }}"
+                        data-wanttotry="{% if is_want_to_try %}true{% else %}false{% endif %}"
+                        onclick="handleToMake(this)"
+                    >{% if is_want_to_try %}✅ Wanted to Try{% else %}🍳 To Make{% endif %}</button>
                     {% endif %}
                     {% if user.is_authenticated %}
                     <button 
@@ -148,25 +150,9 @@
                 </ul>
             </section>
 
-            <!-- 2-STEP INGREDIENT CHECK ─────────────────────────────────
-                     Only shown to logged-in users.
-                     Step 1: "Check my ingredients" button
-                             → calls check_ingredients API
-                             → shows popup with available/missing split
-                             → nothing added to grocery yet
-                     Step 2: "Add to Grocery List" button inside popup
-                             → calls add_ingredients API
-                             → adds available (confirmed) + missing to grocery
-                             → shows final confirmation                      -->
-            {% if user.is_authenticated and recipe.ingredients.count > 0 %}
-                <button
-                    class="btn_check_ingredients"
-                    data-recipe-id="{{ recipe.id }}"
-                    onclick="step1CheckIngredients(this)"
-                >
-                    🛒 Check my ingredients
-                </button>
-            {% endif %}
+            <!-- Ingredient checking is now reached through the "To Make" button above:
+                 once a recipe is on the Want to Try list, clicking To Make again
+                 opens a menu with "View Want to Try list" and "Check my ingredients". -->
 
             <!-- INSTRUCTIONS SECTION ────────────────────────────────────────
                  recipe.instructions → TextField from Recipe table            -->
@@ -243,125 +229,167 @@
 
 <style>
     .card_actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0 0.4rem; }
-    .btn_action { padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; border-radius: 6px; border: 1.5px solid; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; white-space: nowrap; }
-    .btn_check  { background: #f0faf4; color: #2d6a4f; border-color: #6ac383; }
-    .btn_check:hover { background: #6ac383; color: #fff; }
-    .btn_tomake { background: #fff8ee; color: #8a5a00; border-color: #e6a817; }
-    .btn_tomake:hover { background: #e6a817; color: #fff; }
+    .btn_action { padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; border-radius: 18px; border: 1.5px solid; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+    .btn_check  { background: var(--sage-pale); color: var(--sage-dark); border-color: var(--sage); }
+    .btn_check:hover { background: var(--sage); color: var(--paper); }
+    .btn_tomake { background: var(--terracotta-pale); color: var(--gold-dark); border-color: var(--gold); }
+    .btn_tomake:hover { background: var(--gold); color: var(--paper); }
+    .btn_tomake_active { background: var(--sage-pale); color: var(--sage-dark); border-color: var(--sage); }
+    .btn_tomake_active:hover { background: var(--sage); color: var(--paper); }
     .btn_fav {
-        background: #ffff;
-        border: 1.5px solid #c0386a;
-        color: #c0386a;
+        background: var(--paper);
+        border: 1.5px solid var(--berry);
+        color: var(--berry);
         padding: 0.5rem 1rem;
-        border-radius: 8px;
+        border-radius: 18px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;}
-    .btn_fav:hover { background: #c0386a; color: #fff; border-color: #c0386a; }
+    .btn_fav:hover { background: var(--berry); color: var(--paper); border-color: var(--berry); }
     .btn_fav_active {
-        background: #fff5f5;
-        border-color: #c0386a;
-        color: #c0386a;}
-    .btn_fav_active:hover { background: #a02a58 !important; border-color: #a02a58 !important; cursor: default; }
-    .btn_share  { background: #f0f4ff; color: #2a4a8a; border-color: #6488d4; }
-    .btn_share:hover { background: #6488d4; color: #fff; }
-    .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
+        background: var(--rose-pale);
+        border-color: var(--berry);
+        color: var(--berry);}
+    .btn_fav_active:hover { background: var(--berry-dark) !important; border-color: var(--berry-dark) !important; cursor: default; }
+    .btn_share  { background: var(--sage-pale); color: #4C6478; border-color: #6E8A9E; }
+    .btn_share:hover { background: #6E8A9E; color: var(--paper); }
+    .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(58,43,34,0.35); z-index: 300; }
     .popup-overlay.open { display: block; }
-    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border-radius: 16px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--paper); border-radius: 22px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(58,43,34,0.2); }
     .popup.open { display: block; }
-    .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
+    .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--brown-soft); }
     .popup-icon  { font-size: 2.5rem; text-align: center; margin-bottom: 0.8rem; }
-    .popup-title { font-size: 1.2rem; font-weight: 800; color: #2c2520; margin-bottom: 0.5rem; text-align: center; }
-    .popup-msg   { font-size: 0.88rem; color: #666; text-align: center; margin-bottom: 1.2rem; }
+    .popup-title { font-size: 1.2rem; font-weight: 800; color: var(--brown); margin-bottom: 0.5rem; text-align: center; }
+    .popup-msg   { font-size: 0.88rem; color: var(--brown-soft); text-align: center; margin-bottom: 1.2rem; }
     .ingredient-section { margin-bottom: 1rem; }
     .ingredient-section h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
-    .ingredient-section.available h4 { color: #2d6a4f; }
-    .ingredient-section.missing  h4  { color: #b85c38; }
+    .ingredient-section.available h4 { color: var(--sage-dark); }
+    .ingredient-section.missing  h4  { color: var(--terracotta-dark); }
     .ingredient-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
-    .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
-    .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
-    .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
-    .missing_summary { margin-top: 1rem; padding: 1rem; border: 1px solid #f5ddd4; border-radius: 10px; background: #fff8f5; }
-    .missing_label { font-size: 0.9rem; font-weight: 700; color: #b85c38; margin-bottom: 0.6rem; }
+    .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 18px; }
+    .available .ingredient-list li { background: var(--sage-pale); color: var(--sage-dark); }
+    .missing   .ingredient-list li { background: var(--terracotta-pale); color: var(--terracotta-dark); }
+    .missing_summary { margin-top: 1rem; padding: 1rem; border: 1px solid var(--terracotta-pale); border-radius: 22px; background: var(--rose-pale); }
+    .missing_label { font-size: 0.9rem; font-weight: 700; color: var(--terracotta-dark); margin-bottom: 0.6rem; }
     .missing_list { list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 0.35rem; }
-    .missing_list li { padding: 0.35rem 0.65rem; border-radius: 6px; background: #fff3ee; color: #b85c38; }
-    .popup-btn { display: block; width: 100%; padding: 0.75rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s; }
-    .popup-btn:hover { background: #6ac383; }
-    .popup-btn.secondary { background: #fff; color: #555; border: 1.5px solid #ddd; margin-top: 0.4rem; }
-    .popup-btn.secondary:hover { border-color: #6ac383; color: #2d6a4f; }
-    .toast { position: fixed; bottom: 28px; right: 28px; background: #2c2520; color: #fff; padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
+    .missing_list li { padding: 0.35rem 0.65rem; border-radius: 18px; background: var(--terracotta-pale); color: var(--terracotta-dark); }
+    .popup-btn { display: block; width: 100%; padding: 0.75rem; background: var(--sage); color: var(--paper); border: none; border-radius: 18px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s; }
+    .popup-btn:hover { background: var(--sage); }
+    .popup-btn.secondary { background: var(--paper); color: var(--brown-soft); border: 1.5px solid var(--tan); margin-top: 0.4rem; }
+    .popup-btn.secondary:hover { border-color: var(--sage); color: var(--sage-dark); }
+    .toast { position: fixed; bottom: 28px; right: 28px; background: var(--brown); color: var(--paper); padding: 0.7rem 1.2rem; border-radius: 18px; font-size: 0.85rem; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
     .toast.show { opacity: 1; transform: none; }
-    .toast.success { background: #2d6a4f; }
-    .toast.error   { background: #b85c38; }
+    .toast.success { background: var(--sage-dark); }
+    .toast.error   { background: var(--terracotta-dark); }
     .detail_meta { display: flex; gap: 2rem; margin: 1rem 0; flex-wrap: wrap; font-size: 0.95rem; }
-    .meta_creator { color: #666; }
-    .meta_rating { font-weight: 700; color: #8a5a00; }
-    .rating_count { color: #999; font-weight: normal; font-size: 0.85rem; margin-left: 0.3rem; }
-    .rating_widget { background: #f9f9f9; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; }
+    .meta_creator { color: var(--brown-soft); }
+    .meta_rating { font-weight: 700; color: var(--gold-dark); }
+    .rating_count { color: var(--brown-soft); font-weight: normal; font-size: 0.85rem; margin-left: 0.3rem; }
+    .rating_widget { background: var(--cream); padding: 1rem; border-radius: 22px; margin-bottom: 1rem; }
     .stars_container { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
-    .star_btn { background: none; border: none; font-size: 2rem; cursor: pointer; color: #ddd; transition: color 0.2s; padding: 0; }
-    .star_btn:hover { color: #ffd700; }
-    .star_btn.active { color: #ffd700; }
-    .current_rating { display: block; font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
-    .comment_form_wrap { background: #f9f9f9; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; }
+    .star_btn { background: none; border: none; font-size: 2rem; cursor: pointer; color: var(--tan); transition: color 0.2s; padding: 0; }
+    .star_btn:hover { color: var(--gold); }
+    .star_btn.active { color: var(--gold); }
+    .current_rating { display: block; font-size: 0.9rem; color: var(--brown-soft); margin-top: 0.5rem; }
+    .comment_form_wrap { background: var(--cream); padding: 1rem; border-radius: 22px; margin-bottom: 1.5rem; }
     .comment_form { display: flex; flex-direction: column; gap: 0.8rem; }
-    .comment_input { padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; }
-    .comment_input:focus { outline: none; border-color: #96D4AA; background: #f0faf4; }
-    .comment_submit { padding: 0.7rem 1.5rem; background: #96D4AA; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .comment_submit:hover { background: #6ac383; }
-    .comment_login_prompt { background: #f0faf4; padding: 1.5rem; border-radius: 10px; text-align: center; margin-bottom: 1.5rem; }
-    .comment_login_prompt a { color: #2d6a4f; font-weight: 600; text-decoration: none; }
+    .comment_input { padding: 0.8rem; border: 1px solid var(--tan); border-radius: 18px; font-family: inherit; font-size: 0.9rem; resize: vertical; }
+    .comment_input:focus { outline: none; border-color: var(--sage); background: var(--sage-pale); }
+    .comment_submit { padding: 0.7rem 1.5rem; background: var(--sage); color: var(--paper); border: none; border-radius: 18px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .comment_submit:hover { background: var(--sage); }
+    .comment_login_prompt { background: var(--sage-pale); padding: 1.5rem; border-radius: 22px; text-align: center; margin-bottom: 1.5rem; }
+    .comment_login_prompt a { color: var(--sage-dark); font-weight: 600; text-decoration: none; }
     .comment_login_prompt a:hover { text-decoration: underline; }
     .comments_list { display: flex; flex-direction: column; gap: 1rem; }
-    .comment_item { background: #f9f9f9; padding: 1rem; border-radius: 8px; border-left: 4px solid #96D4AA; }
+    .comment_item { background: var(--cream); padding: 1rem; border-radius: 18px; border-left: 4px solid var(--sage); }
     .comment_header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem; }
-    .comment_author { color: #2d6a4f; font-size: 0.95rem; }
-    .comment_date { font-size: 0.8rem; color: #999; }
-    .comment_text { color: #555; line-height: 1.6; margin: 0; word-wrap: break-word; }
-    .no_comments { text-align: center; padding: 2rem; color: #999; font-style: italic; }
+    .comment_author { color: var(--sage-dark); font-size: 0.95rem; }
+    .comment_date { font-size: 0.8rem; color: var(--brown-soft); }
+    .comment_text { color: var(--brown-soft); line-height: 1.6; margin: 0; word-wrap: break-word; }
+    .no_comments { text-align: center; padding: 2rem; color: var(--brown-soft); font-style: italic; }
     /* ── Star rating widget ── */
     .rating_widget { display: flex; align-items: center; gap: 0.6rem; margin: 0.8rem 0; }
-    .rating_label  { font-size: 0.85rem; color: #7a6a5a; }
+    .rating_label  { font-size: 0.85rem; color: var(--brown-soft); }
     .star_btn {
         background: none; border: none; font-size: 1.5rem;
-        cursor: pointer; color: #ccc; transition: color 0.15s; padding: 0 2px;}
-    .star_btn:hover { color: #e6a817; }
-    .rating_feedback { font-size: 0.8rem; color: #5c6b3a; font-weight: 600; }
-    .avg_rating { font-size: 0.9rem; color: #7a6a5a; margin-bottom: 1rem; }
-    .no_rating  { color: #bbb; font-style: italic; font-size: 0.85rem; }
+        cursor: pointer; color: var(--tan); transition: color 0.15s; padding: 0 2px;}
+    .star_btn:hover { color: var(--gold); }
+    .rating_feedback { font-size: 0.8rem; color: var(--sage-dark); font-weight: 600; }
+    .avg_rating { font-size: 0.9rem; color: var(--brown-soft); margin-bottom: 1rem; }
+    .no_rating  { color: var(--brown-soft); font-style: italic; font-size: 0.85rem; }
 
     /* ── Recommended section ── */
-    .recommended_section { margin-top: 3rem; padding-top: 1.5rem; border-top: 2px solid #e0d5c1; }
-    .recommended_title { font-size: 1.2rem; font-weight: 700; color: #2c2520; margin-bottom: 1.2rem; }
+    .recommended_section { margin-top: 3rem; padding-top: 1.5rem; border-top: 2px solid var(--tan); }
+    .recommended_title { font-size: 1.2rem; font-weight: 700; color: var(--brown); margin-bottom: 1.2rem; }
     .recommended_grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 1rem;}
     .rec_card {
-        background: #fff; border: 1.5px solid #d9ccb8; border-radius: 10px;
+        background: var(--paper); border: 1.5px solid var(--tan); border-radius: 22px;
         overflow: hidden; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;}
-    .rec_card:hover { box-shadow: 0 4px 16px rgba(44,37,32,0.1); transform: translateY(-2px); border-color: #5c6b3a; }
+    .rec_card:hover { box-shadow: 0 4px 16px rgba(44,37,32,0.1); transform: translateY(-2px); border-color: var(--sage-dark); }
     .rec_img { width: 100%; height: 110px; object-fit: cover; display: block; }
     .rec_img_placeholder {
-        width: 100%; height: 110px; background: linear-gradient(135deg, #e8dcc8, #d9ccb8);
+        width: 100%; height: 110px; background: linear-gradient(135deg, var(--tan-soft), var(--tan));
         display: flex; align-items: center; justify-content: center; font-size: 2rem;}
     .rec_info { padding: 0.7rem; }
-    .rec_name { display: block; font-size: 0.9rem; font-weight: 700; color: #2c2520; margin-bottom: 0.3rem; }
-    .rec_tags { display: block; font-size: 0.72rem; color: #5c6b3a; margin-bottom: 0.2rem; }
-    .rec_meta { display: block; font-size: 0.72rem; color: #7a6a5a; }
-    .no_recommendations { color: #aaa; font-style: italic; font-size: 0.85rem; }
-    .loading_msg { color: #aaa; font-style: italic; font-size: 0.85rem; }
+    .rec_name { display: block; font-size: 0.9rem; font-weight: 700; color: var(--brown); margin-bottom: 0.3rem; }
+    .rec_tags { display: block; font-size: 0.72rem; color: var(--sage-dark); margin-bottom: 0.2rem; }
+    .rec_meta { display: block; font-size: 0.72rem; color: var(--brown-soft); }
+    .no_recommendations { color: var(--brown-soft); font-style: italic; font-size: 0.85rem; }
+    .loading_msg { color: var(--brown-soft); font-style: italic; font-size: 0.85rem; }
 </style>
 
 <!-- FAVOURITE RECIPE SCRIPT ───────────────────────────────────────────────────────
      Same script as recipe_list.html — sends POST to favourite_recipe view        -->
 <script>
-    // ── Step 1: Check ingredients — shows results, nothing added yet ──────────
-    async function step1CheckIngredients(btn) {
-        const recipeId = btn.dataset.recipeId;
-        btn.disabled   = true;
-        btn.textContent = 'Checking…';
- 
+    // ── To Make button ───────────────────────────────────────────────────────
+    // 1st click: adds the recipe to the Want to Try list.
+    // 2nd click (already on the list): opens a menu with two choices —
+    // view the Want to Try list, or check ingredients for this recipe.
+    // Works the same for both preset and user-created recipes.
+    async function handleToMake(btn) {
+        const recipeId   = btn.dataset.recipeId;
+        const recipeName = btn.dataset.recipeName;
+        const inList     = btn.dataset.wanttotry === 'true';
+
+        if (inList) {
+            showToMakeMenu(recipeId, recipeName);
+            return;
+        }
+
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/toggle-want-to-try/${recipeId}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            });
+            if (!res.ok) throw new Error();
+            btn.dataset.wanttotry = 'true';
+            btn.textContent = '✅ Wanted to Try';
+            btn.classList.add('btn_tomake_active');
+            showToast('Added to your Want to Try list ✅', 'success');
+        } catch {
+            showToast('Could not add to Want to Try list. Try again.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function showToMakeMenu(recipeId, recipeName) {
+        document.getElementById('popupContent').innerHTML = `
+            <div class="popup-icon">🍳</div>
+            <div class="popup-title">Already on your Want to Try list</div>
+            <div class="popup-msg">What would you like to do with <strong>${recipeName || 'this recipe'}</strong>?</div>
+            <a href="/want-to-try/" class="popup-btn">📋 View Want to Try List</a>
+            <button class="popup-btn secondary" onclick="closePopup(); checkIngredientsFor(${recipeId})">🛒 Check my Ingredients</button>
+            <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+        `;
+        openPopup();
+    }
+
+    async function checkIngredientsFor(recipeId) {
         try {
             const res  = await fetch(`/api/check-ingredients/${recipeId}/`, {
                 method:  'POST',
@@ -372,9 +400,6 @@
             showStep1Popup(data);
         } catch {
             showToast('Could not check ingredients. Try again.', 'error');
-        } finally {
-            btn.disabled    = false;
-            btn.textContent = '🛒 Check my ingredients';
         }
     }
  
@@ -417,7 +442,6 @@
                 ${data.can_cook
                     ? `All ingredients for <strong>${data.recipe}</strong> are in your grocery list.`
                     : `<strong>${data.added_missing.length}</strong> missing ingredient(s) added to your grocery list.`}
-                <br><small style="color:#2d6a4f;">✓ Saved to your <a href="/want-to-try/" style="color:#2d6a4f;font-weight:700;">Want to Try</a> list!</small>
             </div>
             <a href="/grocery/" class="popup-btn">View Grocery List</a>
             <a href="/want-to-try/" class="popup-btn secondary">View Want to Try →</a>
@@ -644,7 +668,7 @@
 function highlightStars(count) {
     document.querySelectorAll('.star_btn').forEach((btn, i) => {
         btn.textContent = i < count ? '★' : '☆';
-        btn.style.color = i < count ? '#e6a817' : '#ccc';
+        btn.style.color = i < count ? 'var(--gold)' : 'var(--tan)';
     });
 }
 

@@ -10,19 +10,23 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 import environ
-import os
+from dotenv import load_dotenv
+
+# Set the project base directory
+# Remove or replace this line:
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 
 # Initialize environment variables
 env = environ.Env(
     # set casting and default values
     EMAIL_USE_TLS=(bool, True)
 )
-
-# Set the project base directory
-# Remove or replace this line:
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Take environment variables from .env file
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
@@ -132,6 +136,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 
 # The explicit address providing verification dispatches
 EMAIL_HOST_USER = env('EMAIL_USER', default='wearecampuscook@gmail.com')
@@ -146,6 +151,8 @@ EMAIL_HOST_PASSWORD = env('EMAIL_PASSWORD', default='')
 
 # Default sender profile fallback
 DEFAULT_FROM_EMAIL = f'CampusCook <{EMAIL_HOST_USER}>'
+
+EMAIL_TIMEOUT       = 10
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

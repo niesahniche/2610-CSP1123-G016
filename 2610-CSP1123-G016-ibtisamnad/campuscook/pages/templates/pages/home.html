@@ -38,11 +38,369 @@
   .feature_icon { font-size: 2.2rem; margin-bottom: 0.8rem; }
   .feature_card h3 { font-size: 1rem; font-weight: 700; color: var(--brown); margin-bottom: 0.4rem; }
   .feature_card p { font-size: 0.85rem; color: #7a6a5a; line-height: 1.5; margin: 0; }
+
+  .popular_home {
+    position: relative;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 2.4rem;
+    border: 1.5px solid rgba(228, 211, 180, 0.9);
+    border-radius: 30px;
+    background:
+      linear-gradient(180deg, rgba(255, 253, 249, 0.96), rgba(251, 243, 232, 0.92)),
+      radial-gradient(circle at top right, rgba(82, 104, 74, 0.12), transparent 34%);
+    box-shadow: 0 24px 48px rgba(58, 43, 34, 0.1);
+    overflow: hidden;
+  }
+
+  .popular_home::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, rgba(193, 102, 47, 0.12), transparent 70%);
+    pointer-events: none;
+  }
+
+  .popular_header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.35rem;
+    border-bottom: 1px solid rgba(228, 211, 180, 0.9);
+  }
+
+  .popular_header_text {
+    max-width: 620px;
+  }
+
+  .popular_eyebrow {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: var(--sage-pale);
+    color: var(--green-dark);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .popular_header h2 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(2rem, 3vw, 2.8rem);
+    line-height: 1.08;
+  }
+
+  .popular_header p {
+    margin: 0;
+    color: var(--brown-soft);
+    font-size: 0.98rem;
+    line-height: 1.7;
+  }
+
+  .popular_badge {
+    position: relative;
+    z-index: 1;
+    min-width: 150px;
+    padding: 1rem 1.1rem;
+    border: 1.5px solid var(--tan);
+    border-radius: 20px;
+    background: var(--paper);
+    text-align: left;
+    box-shadow: 0 10px 24px rgba(58, 43, 34, 0.08);
+  }
+
+  .popular_badge strong {
+    display: block;
+    color: var(--green-dark);
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .popular_badge span {
+    display: block;
+    margin-top: 0.45rem;
+    color: var(--brown-soft);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .podium {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 1.4rem;
+    margin: 0 0 2rem;
+  }
+
+  .podium_card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .podium_card.first { order: 2; }
+  .podium_card.second { order: 1; }
+  .podium_card.third { order: 3; }
+
+  .podium_rank {
+    margin-bottom: 0.75rem;
+    padding: 0.42rem 0.78rem;
+    border: 1px solid rgba(228, 211, 180, 0.9);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.86);
+    color: var(--green-dark);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .podium_recipe_box {
+    width: 100%;
+    max-width: 238px;
+    min-height: 168px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.35rem;
+    border: 1.5px solid rgba(228, 211, 180, 0.95);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 253, 249, 0.98), rgba(250, 241, 227, 0.95));
+    color: var(--brown);
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.4;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    box-shadow: 0 14px 26px rgba(58, 43, 34, 0.08);
+    transition: transform 0.18s, box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .podium_recipe_box:hover {
+    transform: translateY(-4px);
+    border-color: rgba(193, 102, 47, 0.4);
+    box-shadow: 0 20px 34px rgba(58, 43, 34, 0.12);
+  }
+
+  .podium_card.first .podium_recipe_box {
+    max-width: 270px;
+    min-height: 188px;
+    font-size: 1.15rem;
+  }
+
+  .podium_meta {
+    margin: 0.9rem 0 0.85rem;
+    color: var(--brown-soft);
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+
+  .podium_block {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 22px 22px 0 0;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 900;
+    box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .first .podium_block {
+    height: 148px;
+    background: linear-gradient(180deg, var(--sage-dark), #3f5641);
+  }
+
+  .second .podium_block {
+    height: 116px;
+    background: linear-gradient(180deg, var(--sage), #718968);
+  }
+
+  .third .podium_block {
+    height: 94px;
+    background: linear-gradient(180deg, var(--gold), #c58b2b);
+  }
+
+  .popular_bars {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .popular_bar_item {
+    display: grid;
+    grid-template-columns: 52px minmax(130px, 1.15fr) minmax(140px, 2fr) 52px;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border: 1.5px solid rgba(228, 211, 180, 0.9);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 10px 20px rgba(58, 43, 34, 0.05);
+    backdrop-filter: blur(8px);
+    transition: transform 0.15s, box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .popular_bar_item:hover {
+    transform: translateY(-2px);
+    border-color: rgba(193, 102, 47, 0.35);
+    box-shadow: 0 16px 28px rgba(58, 43, 34, 0.09);
+  }
+
+  .bar_rank {
+    color: var(--terracotta);
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .bar_name {
+    color: var(--brown);
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .bar_name:hover {
+    color: var(--terracotta-dark);
+  }
+
+  .bar_track {
+    height: 12px;
+    border-radius: 999px;
+    background: #ebdfcd;
+    overflow: hidden;
+  }
+
+  .bar_fill {
+    height: 100%;
+    min-width: 10px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--terracotta), var(--sage-dark));
+  }
+
+  .bar_count {
+    text-align: right;
+    color: var(--green-dark);
+    font-weight: 800;
+  }
+
+  .popular_empty {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 2.2rem;
+    border: 1.5px solid rgba(228, 211, 180, 0.9);
+    border-radius: 24px;
+    background: rgba(255, 253, 249, 0.92);
+    text-align: center;
+    box-shadow: 0 12px 24px rgba(58, 43, 34, 0.06);
+  }
+
+  .popular_empty h3 {
+    margin: 0 0 0.6rem;
+    font-size: 1.5rem;
+  }
+
+  .popular_empty p {
+    margin: 0 0 1rem;
+    color: var(--brown-soft);
+  }
+
+  .popular_empty a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 1.2rem;
+    border-radius: 999px;
+    background: var(--terracotta);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  .popular_empty a:hover {
+    background: var(--terracotta-dark);
+    color: #fff;
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 860px) {
+    .popular_home {
+      padding: 2rem 1.25rem;
+      border-radius: 24px;
+    }
+
+    .popular_header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .popular_badge {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .podium {
+      grid-template-columns: 1fr;
+      max-width: 360px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .podium_card.first,
+    .podium_card.second,
+    .podium_card.third {
+      order: initial;
+    }
+
+    .first .podium_block,
+    .second .podium_block,
+    .third .podium_block {
+      height: 84px;
+    }
+
+    .popular_bar_item {
+      grid-template-columns: 52px 1fr 52px;
+    }
+
+    .bar_track {
+      grid-column: 2 / 4;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .popular_header h2 {
+      font-size: 1.8rem;
+    }
+
+    .popular_bar_item {
+      gap: 0.75rem;
+      padding: 0.9rem;
+    }
+  }
 </style>
 
 <div class="home_hero">
-  <h1>Campus <span>Cook</span> 🍳</h1>
-  <p>Discover budget-friendly recipes, manage your grocery list,<br>and cook smarter on campus.</p>
+  <h1>Campus <span>Cook</span></h1>
+  <p>Discover budget-friendly recipes, stay on top of your grocery list, and find the campus favourites students keep coming back to.</p>
   <div class="home_cta">
     <a href="{% url 'recipe_list' %}" class="cta_primary">Browse Recipes</a>
     {% if not user.is_authenticated %}
@@ -54,9 +412,73 @@
 </div>
 
 <div class="home_features">
-  <div class="feature_card"><div class="feature_icon">🍽️</div><h3>Browse Recipes</h3><p>Filter by budget, appliance, meal type, and more.</p></div>
-  <div class="feature_card"><div class="feature_icon">🛒</div><h3>Grocery List</h3><p>Track what you have and what you still need to buy.</p></div>
-  <div class="feature_card"><div class="feature_icon">♥</div><h3>Save Favourites</h3><p>Bookmark recipes you love for quick access later.</p></div>
+  <div class="feature_card"><div class="feature_icon">&#127869;</div><h3>Browse Recipes</h3><p>Explore affordable meals with practical filters for budget, appliances, and timing.</p></div>
+  <div class="feature_card"><div class="feature_icon">&#128722;</div><h3>Grocery Planning</h3><p>Keep your ingredient list organised so shopping and meal prep feel a lot easier.</p></div>
+  <div class="feature_card"><div class="feature_icon">&#9829;</div><h3>Student Favourites</h3><p>See which dishes are most loved across the Campus Cook community.</p></div>
 </div>
+
+<section class="popular_home" id="popular-recipes" aria-labelledby="popular-recipes-title">
+  <div class="popular_header">
+    <div class="popular_header_text">
+      <span class="popular_eyebrow">Community ranking</span>
+      <h2 id="popular-recipes-title">Popular recipes on Campus Cook</h2>
+      <p>The most favourited recipes across the site, updated from what students save the most.</p>
+    </div>
+    <div class="popular_badge">
+      <strong>Top 10</strong>
+      <span>Ranked by total favourites from the whole community.</span>
+    </div>
+  </div>
+
+  {% if top_three %}
+    <section class="podium" aria-label="Top 3 popular recipes">
+      {% if top_three.1 %}
+        <article class="podium_card second">
+          <div class="podium_rank">#2</div>
+          <a href="{% url 'recipe_detail' top_three.1.id %}" class="podium_recipe_box">{{ top_three.1.name }}</a>
+          <p class="podium_meta">{{ top_three.1.favourite_count }} favourite{{ top_three.1.favourite_count|pluralize }}</p>
+          <div class="podium_block">2</div>
+        </article>
+      {% endif %}
+
+      <article class="podium_card first">
+        <div class="podium_rank">#1</div>
+        <a href="{% url 'recipe_detail' top_three.0.id %}" class="podium_recipe_box">{{ top_three.0.name }}</a>
+        <p class="podium_meta">{{ top_three.0.favourite_count }} favourite{{ top_three.0.favourite_count|pluralize }}</p>
+        <div class="podium_block">1</div>
+      </article>
+
+      {% if top_three.2 %}
+        <article class="podium_card third">
+          <div class="podium_rank">#3</div>
+          <a href="{% url 'recipe_detail' top_three.2.id %}" class="podium_recipe_box">{{ top_three.2.name }}</a>
+          <p class="podium_meta">{{ top_three.2.favourite_count }} favourite{{ top_three.2.favourite_count|pluralize }}</p>
+          <div class="podium_block">3</div>
+        </article>
+      {% endif %}
+    </section>
+
+    {% if remaining %}
+      <section class="popular_bars" aria-label="Popular recipes ranked 4 to 10">
+        {% for recipe in remaining %}
+          <article class="popular_bar_item">
+            <div class="bar_rank">#{{ forloop.counter|add:3 }}</div>
+            <a href="{% url 'recipe_detail' recipe.id %}" class="bar_name">{{ recipe.name }}</a>
+            <div class="bar_track">
+              <div class="bar_fill" style="width: {% widthratio recipe.favourite_count max_favourites 100 %}%"></div>
+            </div>
+            <div class="bar_count">{{ recipe.favourite_count }}</div>
+          </article>
+        {% endfor %}
+      </section>
+    {% endif %}
+  {% else %}
+    <section class="popular_empty">
+      <h3>No popular recipes yet</h3>
+      <p>Once recipes start getting favourited, the homepage ranking will appear here.</p>
+      <a href="{% url 'recipe_list' %}">Browse recipes</a>
+    </section>
+  {% endif %}
+</section>
 
 {% endblock %}

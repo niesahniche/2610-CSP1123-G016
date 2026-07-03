@@ -130,9 +130,22 @@ def cleanup_grocery_labels_for_recipe(user, recipe_name):
         'updated_item_count': updated_item_count,
     }
 
+
+def get_popular_recipes_context():
+    recipes = list(
+        Recipe.objects.annotate(favourite_count=Count('favourited_by'))
+        .filter(favourite_count__gt=0)
+        .order_by('-favourite_count', 'name')[:10]
+    )
+    return {
+        'top_three': recipes[:3],
+        'remaining': recipes[3:],
+        'max_favourites': recipes[0].favourite_count if recipes else 0,
+    }
+
 # ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
-    return render(request, "pages/home.html")
+    return render(request, "pages/home.html", get_popular_recipes_context())
 
 # ── About ─────────────────────────────────────────────────────────────────────
 def about(request):
@@ -457,21 +470,7 @@ def recipe_detail(request, id):
     return render(request, "pages/recipe_detail.html", context)
 
 def popular(request):
-    recipes = (
-        Recipe.objects.annotate(favourite_count=Count('favourited_by'))
-        .filter(favourite_count__gt=0)
-        .order_by('-favourite_count', 'name')[:10]
-    )
-    popular_recipes = list(recipes)
-    top_three = popular_recipes[:3]
-    remaining = popular_recipes[3:]
-    max_favourites = popular_recipes[0].favourite_count if popular_recipes else 0
-
-    return render(request, "pages/popular.html", {
-        "top_three": top_three,
-        "remaining": remaining,
-        "max_favourites": max_favourites,
-    })
+    return redirect('home')
 
 # ── Add recipe ────────────────────────────────────────────────────────────────
 @login_required

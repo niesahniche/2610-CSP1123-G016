@@ -32,7 +32,12 @@ class AppUserCreationForm(UserCreationForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email', '').strip().lower()
-        if AppUser.objects.filter(email__iexact=email).exists():
+        # Only block if the email belongs to an account that already completed
+        # 2FA verification. An account stuck at is_active=False is just an
+        # abandoned/expired signup attempt — it must NOT permanently lock this
+        # email out of ever signing up (this was the bug: retrying signup after
+        # a missed/expired code always failed with "already exists").
+        if AppUser.objects.filter(email__iexact=email, is_active=True).exists():
             raise forms.ValidationError('An account with this email already exists.')
         return email
 

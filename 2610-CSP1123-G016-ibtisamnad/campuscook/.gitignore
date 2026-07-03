@@ -9,4 +9,4 @@ db.sqlite3
 # Environment/IDE
 .vscode/
 .env
-venv/
+venv/".env" 

@@ -105,7 +105,16 @@ class Recipe(models.Model):
  
     def __str__(self):
         return self.name
-    
+
+    @property
+    def image_url(self):
+        # Templates and API views across the app assume this exists
+        # (recipe_list, recipe_detail, user_profile, recommended_recipes,
+        # favourite_recipe_list) but only `image` (the actual ImageField)
+        # was defined, so every one of those was silently failing to show
+        # images — or, in the two API views, crashing with AttributeError.
+        return self.image.url if self.image else ''
+
     @property
     def avg_rating(self):
         ratings = self.ratings.all()

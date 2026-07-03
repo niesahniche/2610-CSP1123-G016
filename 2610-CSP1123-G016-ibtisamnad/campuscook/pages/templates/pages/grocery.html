@@ -369,8 +369,33 @@
     cursor: pointer;
   }
   .purchased_section { margin-top: 1rem; }
+  .purchased_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
   .purchased_heading { font-size: 0.95rem; color: #2a6f75; border-color: #7fbfc4; margin-top: 0.8rem; }
   .purchased_item { background: #f3fbfa; border-color: #d2e9e6; }
+  .btn_transfer {
+    border: 1.5px solid #6fb9be;
+    background: linear-gradient(135deg, #eef9fa 0%, #dff2f3 100%);
+    color: #1f5f65;
+    padding: 0.55rem 0.95rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(60, 125, 131, 0.14);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+  }
+  .btn_transfer:hover {
+    background: linear-gradient(135deg, #7fbfc4 0%, #5faab2 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(60, 125, 131, 0.2);
+  }
   .btn_remove:hover { background: #fdf0ee; color: #d64a3d; }
   .btn_got_it {
     font-size: 0.75rem;
@@ -516,9 +541,11 @@
     if (newIngredientsInput) {
       newIngredientsInput.addEventListener('input', function () {
         const tagContainer = document.getElementById('new_ingredients_tags');
-        const cleaned = this.value.replace(/,/g, '').trim();
-        this.value = cleaned;
-        tagContainer.innerHTML = cleaned ? `<span class="ingredient_tag">+ ${cleaned}</span>` : '';
+        const cleaned = this.value.replace(/,/g, '');
+        if (cleaned !== this.value) this.value = cleaned;
+
+        const previewValue = cleaned.trim();
+        tagContainer.innerHTML = previewValue ? `<span class="ingredient_tag">+ ${previewValue}</span>` : '';
       });
     }
 

@@ -15,7 +15,7 @@
                     <div class="auth-message error">{{ error }}</div>
                 {% endfor %}
                 {% for msg in messages %}
-                    <div class="auth-message error">{{ msg }}</div>
+                    <div class="auth-message {{ msg.tags|default:'error' }}">{{ msg }}</div>
                 {% endfor %}
             </div>
         {% endif %}

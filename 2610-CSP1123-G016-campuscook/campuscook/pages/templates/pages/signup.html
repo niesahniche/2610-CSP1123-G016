@@ -11,15 +11,17 @@
 
         {% if form.non_field_errors or messages %}
             <div class="auth-messages">
-                <div class="auth-message error">
-                    <strong>Please fix the errors below:</strong>
-                    {% for error in form.non_field_errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
-                    {% endfor %}
-                </div>
+                {% if form.non_field_errors %}
+                    <div class="auth-message error">
+                        <strong>Please fix the errors below:</strong>
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% for message in messages %}
+                    <div class="auth-message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
             </div>
         {% endif %}
 

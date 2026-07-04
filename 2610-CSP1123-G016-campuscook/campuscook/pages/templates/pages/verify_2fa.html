@@ -12,7 +12,7 @@
         {% if messages %}
             <div class="auth-messages">
                 {% for message in messages %}
-                    <div class="auth-message error">{{ message }}</div>
+                    <div class="auth-message {{ message.tags }}">{{ message }}</div>
                 {% endfor %}
             </div>
         {% endif %}

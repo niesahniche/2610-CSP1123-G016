@@ -3,60 +3,255 @@
 {% block content %}
 
 <style>
+  /* ── Hero ─────────────────────────────────────────── */
   .home_hero {
-    max-width: 700px; margin: 5rem auto 3rem;
-    text-align: center; padding: 0 1.5rem;
+    position: relative;
+    max-width: 1080px; margin: 0 auto; padding: 4.5rem 1.5rem 3rem;
+    text-align: center; overflow: hidden;
+  }
+  .home_hero::before, .home_hero::after {
+    content: ""; position: absolute; border-radius: 50%; z-index: 0;
+    filter: blur(2px);
+  }
+  .home_hero::before {
+    width: 220px; height: 220px; background: var(--sage-pale);
+    top: -60px; left: -40px; opacity: 0.9;
+  }
+  .home_hero::after {
+    width: 160px; height: 160px; background: var(--terracotta-pale);
+    bottom: -30px; right: -20px; opacity: 0.9;
+  }
+  .home_eyebrow {
+    position: relative; z-index: 1;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: var(--sage-pale); color: var(--sage-dark);
+    padding: 0.4rem 0.9rem; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.4px;
+    text-transform: uppercase; margin-bottom: 1.2rem;
   }
   .home_hero h1 {
-    font-size: 3rem; font-weight: 800; color: var(--brown);
-    letter-spacing: -1px; margin-bottom: 1rem; line-height: 1.1;
+    position: relative; z-index: 1;
+    font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; color: var(--brown);
+    letter-spacing: -1px; margin: 0 0 1rem; line-height: 1.08;
   }
-  .home_hero h1 span { color: var(--green-dark); }
-  .home_hero p { font-size: 1.15rem; color: #7a6a5a; margin-bottom: 2.5rem; line-height: 1.7; }
-  .home_cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .home_hero h1 span { color: var(--terracotta); }
+  .home_hero p {
+    position: relative; z-index: 1;
+    font-size: 1.1rem; color: var(--brown-soft); margin: 0 auto 2.2rem;
+    line-height: 1.7; max-width: 560px;
+  }
+  .home_cta { position: relative; z-index: 1; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2.4rem; }
   .home_cta a {
-    padding: 0.85rem 2rem; border-radius: 10px;
-    font-size: 1rem; font-weight: 700; text-decoration: none;
-    transition: background 0.2s, transform 0.15s;
+    padding: 0.9rem 2rem; border-radius: 999px;
+    font-size: 0.98rem; font-weight: 700; text-decoration: none;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
   }
-  .cta_primary { background: var(--green-dark); color: #fff; box-shadow: 0 4px 14px rgba(45,106,79,0.3); }
-  .cta_primary:hover { background: var(--green); transform: translateY(-2px); color: #fff; }
-  .cta_secondary { background: #fff; color: var(--brown); border: 1.5px solid var(--tan); }
-  .cta_secondary:hover { border-color: var(--green); transform: translateY(-2px); color: var(--brown); }
+  .cta_primary { background: var(--terracotta); color: var(--paper); box-shadow: 0 8px 20px rgba(193,102,47,0.28); }
+  .cta_primary:hover { background: var(--terracotta-dark); transform: translateY(-2px); color: var(--paper); }
+  .cta_secondary { background: var(--paper); color: var(--brown); border: 1.5px solid var(--tan); }
+  .cta_secondary:hover { border-color: var(--sage); color: var(--sage-dark); transform: translateY(-2px); }
+
+  .home_stats {
+    position: relative; z-index: 1;
+    display: flex; justify-content: center; gap: 2.6rem; flex-wrap: wrap;
+    font-family: 'Fraunces', Georgia, serif;
+  }
+  .home_stats div { text-align: center; }
+  .home_stats strong { display: block; font-size: 1.6rem; color: var(--terracotta-dark); font-weight: 700; }
+  .home_stats span { font-family: 'Figtree', sans-serif; font-size: 0.8rem; color: var(--brown-soft); font-weight: 600; letter-spacing: 0.2px; }
+
+  /* ── Feature cards ────────────────────────────────── */
+  .home_section { max-width: 1080px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+  .home_section_head { text-align: center; margin-bottom: 2rem; }
+  .home_section_head h2 { font-size: 1.6rem; margin: 0 0 0.5rem; }
+  .home_section_head p { color: var(--brown-soft); margin: 0; font-size: 0.98rem; }
 
   .home_features {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
-    gap: 1.2rem; max-width: 860px; margin: 0 auto 4rem; padding: 0 1.5rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 1.2rem;
   }
   .feature_card {
-    background: #fff; border: 1.5px solid var(--tan); border-radius: 14px;
-    padding: 1.8rem 1.4rem; text-align: center;
-    box-shadow: 0 2px 8px rgba(44,37,32,0.06);
-    transition: transform 0.2s, box-shadow 0.2s;
+    background: var(--paper); border: 1.5px solid var(--tan); border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem; text-align: left;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   }
-  .feature_card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(44,37,32,0.1); }
-  .feature_icon { font-size: 2.2rem; margin-bottom: 0.8rem; }
-  .feature_card h3 { font-size: 1rem; font-weight: 700; color: var(--brown); margin-bottom: 0.4rem; }
-  .feature_card p { font-size: 0.85rem; color: #7a6a5a; line-height: 1.5; margin: 0; }
+  .feature_card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--sage); }
+  .feature_icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: 1rem;
+  }
+  .feature_card:nth-child(1) .feature_icon { background: var(--terracotta-pale); }
+  .feature_card:nth-child(2) .feature_icon { background: var(--sage-pale); }
+  .feature_card:nth-child(3) .feature_icon { background: #FBEEDD; }
+  .feature_card h3 { font-size: 1.05rem; font-weight: 700; color: var(--brown); margin: 0 0 0.4rem; font-family: 'Fraunces', Georgia, serif; }
+  .feature_card p { font-size: 0.9rem; color: var(--brown-soft); line-height: 1.6; margin: 0; }
+
+  /* ── Spotlight recipes ────────────────────────────── */
+  .spotlight_grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  .spotlight_card { text-decoration: none; color: inherit; display: block; }
+  .spotlight_image_wrap {
+    width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-md);
+    overflow: hidden; background: var(--sage-pale);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .spotlight_image_wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s ease; }
+  .spotlight_card:hover .spotlight_image_wrap img { transform: scale(1.05); }
+  .spotlight_placeholder { font-size: 2.4rem; opacity: 0.5; }
+  .spotlight_name { margin: 0.8rem 0 0.2rem; font-weight: 700; color: var(--brown); font-size: 1rem; }
+  .spotlight_meta { font-size: 0.82rem; color: var(--brown-soft); }
+  .spotlight_empty {
+    text-align: center; padding: 2.5rem 1.5rem; border: 1.5px dashed var(--tan);
+    border-radius: var(--radius-lg); color: var(--brown-soft); font-size: 0.95rem;
+  }
+
+  /* ── How it works ─────────────────────────────────── */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 1.5rem; counter-reset: step; }
+  .step { position: relative; padding-left: 3.2rem; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 2.2rem; height: 2.2rem; border-radius: 50%;
+    background: var(--sage-dark); color: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 1rem;
+  }
+  .step h4 { margin: 0.2rem 0 0.35rem; font-size: 1rem; color: var(--brown); }
+  .step p { margin: 0; font-size: 0.88rem; color: var(--brown-soft); line-height: 1.55; }
+
+  /* ── Closing CTA banner ───────────────────────────── */
+  .home_banner_cta {
+    max-width: 1080px; margin: 1rem auto 3.5rem; padding: 0 1.5rem;
+  }
+  .home_banner_cta_inner {
+    background: linear-gradient(120deg, var(--sage-dark), var(--terracotta));
+    border-radius: var(--radius-lg);
+    padding: 2.6rem 2rem; text-align: center; color: var(--paper);
+    box-shadow: var(--shadow-md);
+  }
+  .home_banner_cta_inner h2 { color: var(--paper); margin: 0 0 0.5rem; font-size: 1.5rem; }
+  .home_banner_cta_inner p { color: rgba(255,255,255,0.88); margin: 0 0 1.4rem; font-size: 0.95rem; }
+  .home_banner_cta_inner a {
+    display: inline-block; background: var(--paper); color: var(--terracotta-dark);
+    padding: 0.85rem 2rem; border-radius: 999px; font-weight: 700; font-size: 0.95rem;
+    transition: transform 0.15s;
+  }
+  .home_banner_cta_inner a:hover { transform: translateY(-2px); color: var(--terracotta-dark); }
+
+  @media (max-width: 600px) {
+    .home_hero { padding: 3rem 1.2rem 2rem; }
+    .home_stats { gap: 1.6rem; }
+  }
 </style>
 
+<!-- HERO ───────────────────────────────────────────────────────────────── -->
 <div class="home_hero">
-  <h1>Campus <span>Cook</span> 🍳</h1>
-  <p>Discover budget-friendly recipes, manage your grocery list,<br>and cook smarter on campus.</p>
+  <span class="home_eyebrow">🎓 Made for campus life</span>
+  <h1>Cook smarter, <span>eat better</span>, spend less.</h1>
+  <p>Budget-friendly recipes, a grocery list that tracks what you already have, and a nudge toward what to make next — all in one place.</p>
   <div class="home_cta">
-    <a href="{% url 'recipe_list' %}" class="cta_primary">Browse Recipes</a>
+    <a href="{% url 'recipe_list' %}" class="cta_primary">🍽️ Browse Recipes</a>
     {% if not user.is_authenticated %}
-      <a href="{% url 'signup' %}" class="cta_secondary">Create Account</a>
+      <a href="{% url 'signup' %}" class="cta_secondary">Create Free Account</a>
     {% else %}
-      <a href="{% url 'grocery' %}" class="cta_secondary">My Grocery List</a>
+      <a href="{% url 'grocery' %}" class="cta_secondary">🛒 My Grocery List</a>
     {% endif %}
+  </div>
+  <div class="home_stats">
+    <div><strong>{{ recipe_count|default:"0" }}</strong><span>Recipes on Campus Cook</span></div>
+    <div><strong>RM5+</strong><span>Budget-friendly picks</span></div>
+    <div><strong>&lt; 30 min</strong><span>Most recipes to cook</span></div>
   </div>
 </div>
 
-<div class="home_features">
-  <div class="feature_card"><div class="feature_icon">🍽️</div><h3>Browse Recipes</h3><p>Filter by budget, appliance, meal type, and more.</p></div>
-  <div class="feature_card"><div class="feature_icon">🛒</div><h3>Grocery List</h3><p>Track what you have and what you still need to buy.</p></div>
-  <div class="feature_card"><div class="feature_icon">♥</div><h3>Save Favourites</h3><p>Bookmark recipes you love for quick access later.</p></div>
+<!-- FEATURES ──────────────────────────────────────────────────────────── -->
+<div class="home_section">
+  <div class="home_section_head">
+    <h2>Everything you need to eat well</h2>
+    <p>Three simple tools that work together.</p>
+  </div>
+  <div class="home_features">
+    <div class="feature_card">
+      <div class="feature_icon">🍽️</div>
+      <h3>Browse Recipes</h3>
+      <p>Filter by budget, appliance, meal type, and more to find something that fits your day.</p>
+    </div>
+    <div class="feature_card">
+      <div class="feature_icon">🛒</div>
+      <h3>Grocery List</h3>
+      <p>Track what you already have at home and what still needs a trip to the store.</p>
+    </div>
+    <div class="feature_card">
+      <div class="feature_icon">♥</div>
+      <h3>Save Favourites</h3>
+      <p>Bookmark recipes you love and build a "Want to Try" list for later.</p>
+    </div>
+  </div>
 </div>
+
+<!-- SPOTLIGHT RECIPES ─────────────────────────────────────────────────── -->
+<div class="home_section">
+  <div class="home_section_head">
+    <h2>Recipes worth trying</h2>
+    <p>A few favourites from the Campus Cook community.</p>
+  </div>
+  {% if spotlight_recipes %}
+    <div class="spotlight_grid">
+      {% for recipe in spotlight_recipes %}
+        <a class="spotlight_card" href="{% url 'recipe_detail' recipe.id %}">
+          <div class="spotlight_image_wrap">
+            {% if recipe.image %}
+              <img src="{{ recipe.image.url }}" alt="{{ recipe.name }}">
+            {% else %}
+              <span class="spotlight_placeholder">🍲</span>
+            {% endif %}
+          </div>
+          <p class="spotlight_name">{{ recipe.name }}</p>
+          <p class="spotlight_meta">⏱ {{ recipe.cooking_time }} mins · 💰 {{ recipe.get_budget_display }}</p>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="spotlight_empty">No recipes yet — be the first to <a href="{% url 'add_recipe' %}">add one</a>! 🍳</div>
+  {% endif %}
+</div>
+
+<!-- HOW IT WORKS ──────────────────────────────────────────────────────── -->
+<div class="home_section">
+  <div class="home_section_head">
+    <h2>How it works</h2>
+    <p>From hungry to fed in three steps.</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <h4>Find a recipe</h4>
+      <p>Filter by what you're craving, your budget, or the appliance you have on hand.</p>
+    </div>
+    <div class="step">
+      <h4>Check your ingredients</h4>
+      <p>Tap "To Make" on any recipe and instantly see what you have and what's missing.</p>
+    </div>
+    <div class="step">
+      <h4>Grab the rest & cook</h4>
+      <p>Missing items get added straight to your grocery list, ready for your next shop.</p>
+    </div>
+  </div>
+</div>
+
+<!-- CLOSING CTA ───────────────────────────────────────────────────────── -->
+{% if not user.is_authenticated %}
+<div class="home_banner_cta">
+  <div class="home_banner_cta_inner">
+    <h2>Ready to cook smarter?</h2>
+    <p>Create a free account and start building your grocery list today.</p>
+    <a href="{% url 'signup' %}">Get Started — It's Free</a>
+  </div>
+</div>
+{% endif %}
 
 {% endblock %}

@@ -1,146 +1,59 @@
 {% extends 'pages/base.html' %}
 
 {% block content %}
-<div class="auth-container" style="max-width: 450px; margin: 40px auto; padding: 20px;">
-    <div class="auth-card" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-        <h2 style="color: #004d40; margin-bottom: 5px;">Create Account</h2>
-        <p class="auth-subtitle" style="color: #666; margin-bottom: 25px;">Sign up to get started</p>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-icon-badge">🌱</div>
+        <div class="auth-card-header">
+            <h1>Create your account</h1>
+            <p>Join Campus Cook and start planning meals that fit your budget</p>
+        </div>
+
+        {% if form.non_field_errors or messages %}
+            <div class="auth-messages">
+                <div class="auth-message error">
+                    <strong>Please fix the errors below:</strong>
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
 
         <form method="POST" action="{% url 'signup' %}">
             {% csrf_token %}
 
-            {% if form.non_field_errors or messages %}
-                <div class="auth-error-banner" style="background-color: #fce8e6; color: #a51d24; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.9em;">
-                    <strong>Please fix the errors below:</strong>
-                    {% for error in form.non_field_errors %}
-                        <p style="margin: 4px 0 0 0;">{{ error }}</p>
-                    {% endfor %}
-                    {% for message in messages %}
-                        <p style="margin: 4px 0 0 0;">{{ message }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <div class="auth-form-group" style="margin-bottom: 18px;">
-                <label for="id_username" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">USERNAME</label>
-                <input type="text" id="id_username" name="username" value="{{ form.username.value|default:'' }}" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
-                {% if form.username.errors %}
-                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.username.errors.0 }}</p>
-                {% endif %}
+            <div class="auth-form-group">
+                <label for="id_username">Username</label>
+                <input type="text" id="id_username" name="username" value="{{ form.username.value|default:'' }}" required>
+                {% if form.username.errors %}<p class="auth-field-error">{{ form.username.errors.0 }}</p>{% endif %}
             </div>
 
-            <div class="auth-form-group" style="margin-bottom: 18px;">
-                <label for="id_email" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">EMAIL ADDRESS</label>
-                <input type="email" id="id_email" name="email" value="{{ form.email.value|default:'' }}" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
-                {% if form.email.errors %}
-                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.email.errors.0 }}</p>
-                {% endif %}
+            <div class="auth-form-group">
+                <label for="id_email">Email address</label>
+                <input type="email" id="id_email" name="email" value="{{ form.email.value|default:'' }}" required>
+                {% if form.email.errors %}<p class="auth-field-error">{{ form.email.errors.0 }}</p>{% endif %}
             </div>
 
-            <div class="auth-form-group" style="margin-bottom: 18px;">
-                <label for="id_password1" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">PASSWORD</label>
-                <input type="password" id="id_password1" name="password1" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
-                {% if form.password1.errors %}
-                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.password1.errors.0 }}</p>
-                {% endif %}
+            <div class="auth-form-group">
+                <label for="id_password1">Password</label>
+                <input type="password" id="id_password1" name="password1" required>
+                {% if form.password1.errors %}<p class="auth-field-error">{{ form.password1.errors.0 }}</p>{% endif %}
             </div>
 
-            <div class="auth-form-group" style="margin-bottom: 25px;">
-                <label for="id_password2" style="display: block; font-weight: 600; font-size: 0.85em; margin-bottom: 6px; color: #004d40; letter-spacing: 0.5px;">CONFIRM PASSWORD</label>
-                <input type="password" id="id_password2" name="password2" required style="width: 100%; padding: 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; box-sizing: border-box;">
-                {% if form.password2.errors %}
-                    <p style="color: #b3261e; margin: 5px 0 0 0; font-size: 0.8rem;">{{ form.password2.errors.0 }}</p>
-                {% endif %}
+            <div class="auth-form-group">
+                <label for="id_password2">Confirm password</label>
+                <input type="password" id="id_password2" name="password2" required>
+                {% if form.password2.errors %}<p class="auth-field-error">{{ form.password2.errors.0 }}</p>{% endif %}
             </div>
 
-            <button type="submit" class="auth-btn-submit" style="width: 100%; padding: 12px; background-color: #6ac383; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Sign Up</button>
+            <button type="submit" class="auth-btn-submit">Sign up</button>
         </form>
 
-        <p style="margin-top: 20px; text-align: center; font-size: 0.9em; color: #666;">Already have an account? <a href="{% url 'login' %}" style="color: #004d40; font-weight: bold; text-decoration: none;">Sign In</a></p>
+        <p class="auth-footer-link">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
     </div>
 </div>
-
-<style>
-  .auth-card {
-    background: #fff;
-    border: 1.5px solid var(--tan);
-    border-radius: 16px;
-    padding: 2.5rem 2.25rem;
-    width: 100%;
-    max-width: 460px;
-    box-shadow: 0 10px 32px rgba(44, 37, 32, 0.10);
-    margin: 3rem auto;
-    animation: auth-fade-in 0.35s ease;
-  }
-  @keyframes auth-fade-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .auth-card-header { text-align: center; margin-bottom: 1.75rem; }
-  .auth-card-header h1 { font-size: 1.7rem; font-weight: 700; color: var(--brown); margin: 0; }
-  .auth-card-header p  { color: var(--olive); margin-top: 0.4rem; font-size: 0.92rem; }
-
-  .auth-form-group { margin-bottom: 1.25rem; }
-
-  .auth-form-group label {
-    display: block; font-size: 0.78rem; font-weight: 700;
-    color: var(--green-dark); margin-bottom: 0.4rem;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
-
-  .auth-card input[type="text"],
-  .auth-card input[type="email"],
-  .auth-card input[type="password"] {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: var(--cream);
-    border: 1.5px solid var(--tan);
-    border-radius: 8px;
-    color: var(--brown);
-    font-size: 0.95rem;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-  }
-  .auth-card input:focus {
-    border-color: var(--green);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(106, 195, 131, 0.18);
-  }
-
-  .auth-errorlist { list-style: none; margin: 0.4rem 0 0; padding: 0; }
-  .auth-errorlist li { font-size: 0.78rem; color: #b3261e; }
-
-  .auth-messages { margin-bottom: 1.25rem; }
-  .auth-message {
-    padding: 0.7rem 1rem; border-radius: 8px;
-    font-size: 0.875rem; margin-bottom: 0.5rem;
-  }
-  .auth-message.success { background: #eaf6ee; color: var(--green-dark); border: 1px solid #bfe3cc; }
-  .auth-message.error   { background: #fdf0ee; color: #9b2226; border: 1px solid #f0b4ae; }
-
-  .auth-btn-submit {
-    width: 100%;
-    padding: 0.875rem;
-    background: var(--green-dark);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 0.4rem;
-    transition: background 0.2s, transform 0.1s;
-  }
-  .auth-btn-submit:hover  { background: var(--green); }
-  .auth-btn-submit:active { transform: scale(0.98); }
-
-  .auth-footer-link {
-    text-align: center; margin-top: 1.5rem;
-    font-size: 0.875rem; color: #8a8070;
-  }
-  .auth-footer-link a { color: var(--green-dark); text-decoration: none; font-weight: 600; }
-  .auth-footer-link a:hover { color: var(--green); text-decoration: underline; }
-</style>
-
 {% endblock %}

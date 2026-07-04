@@ -84,6 +84,21 @@
         a { color: var(--terracotta-dark); text-decoration: none; }
         a:hover { color: var(--terracotta); }
 
+    /* ── Banner ──────────────────────────────────────── */
+        /* Sits above the nav in normal document flow, so it scrolls away
+           while the nav (position: sticky below) stays pinned to the top. */
+        .site_banner {
+            width: 100%;
+            height: clamp(90px, 16vw, 170px);
+            overflow: hidden;
+            display: block;
+        }
+        .site_banner img {
+            width: 100%; height: 100%;
+            object-fit: cover; object-position: center;
+            display: block;
+        }
+
     /* ── Nav ─────────────────────────────────────────── */
         nav {
             background: var(--paper);
@@ -254,7 +269,11 @@
     </style>
 </head>
 <body>
-    
+
+    <div class="site_banner">
+        <img src="{% static 'pages/images/banner.svg' %}" alt="Campus Cook">
+    </div>
+
     <nav>
         <ul>
             <li><a href="{% url 'home' %}">Campus Cook</a></li>

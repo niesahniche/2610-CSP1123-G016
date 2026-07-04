@@ -10,13 +10,6 @@ class AppUser(AbstractUser):
         return self.username
  
  
-class RecipeFilter(models.Model):
-    name = models.CharField(max_length=100)
- 
-    def __str__(self):
-        return self.name
-
-
 class Ingredient(models.Model):
     """Global ingredient list shared by all users and recipes"""
     name = models.CharField(max_length=100, unique=True)
@@ -95,7 +88,6 @@ class Recipe(models.Model):
     budget       = models.CharField(
         max_length=10, choices=BUDGET_CHOICES, default='low'
     )
-    filters      = models.ManyToManyField(RecipeFilter, blank=True)
     # user → AppUser who created this recipe
     user         = models.ForeignKey(
         'pages.AppUser',

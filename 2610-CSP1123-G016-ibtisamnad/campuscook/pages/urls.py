@@ -5,7 +5,6 @@ urlpatterns = [
     # ── Main pages ────────────────────────────────────────────────────────────
     path("",       views.home,  name="home"),
     path("about/", views.about, name="about"),
-    path("popular/", views.popular, name="popular"),
 
     # ── Grocery ───────────────────────────────────────────────────────────────
     path("grocery/",          views.grocery,     name="grocery"),
@@ -16,6 +15,7 @@ urlpatterns = [
     
     # Ingredient search API — for autocomplete in grocery and add_recipe
     path("api/ingredients/", views.ingredient_search, name="ingredient_search"),
+    path("api/to-make/<int:recipe_id>/", views.to_make, name="to_make"),
 
     # ── Recipe pages ──────────────────────────────────────────────────────────
     path("recipes/",                 views.recipe_list,   name="recipe_list"),

@@ -16,6 +16,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.core.mail import send_mail
 from django.conf import settings
+import requests
 from .models import Ingredient, Grocery, AppUser, Recipe, FavouriteRecipe, Comment, Rating, WantToTry
 
 def merge_recipe_labels(existing_label, new_label):
@@ -886,22 +887,48 @@ def _generate_2fa_code():
 
 
 def _send_2fa_email(email, code):
-    """Sends a 2FA code email from wearecampuscook@gmail.com using settings config."""
+    """
+    Sends a 2FA code email via Brevo's transactional email HTTP API.
+
+    We use Brevo instead of Django's SMTP backend because Render's free tier
+    blocks outbound traffic on SMTP ports (25, 465, 587) — see
+    https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports
+    Brevo's API runs over plain HTTPS (port 443), which Render can't block
+    without breaking the rest of the app, so this works on the free tier.
+    """
     subject = "Your CampusCook Verification Code"
-    message = (
+    text_message = (
         f"Thank you for signing up with CampusCook!\n\n"
         f"Your 6-digit verification code is: {code}\n\n"
         f"This code will expire in 10 minutes. Please enter it on the confirmation page to activate your account."
     )
-    
-    # settings.EMAIL_HOST_USER ensures it matches 'wearecampuscook@gmail.com' securely
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=settings.EMAIL_HOST_USER,
-        recipient_list=[email],
-        fail_silently=False,
+
+    if not settings.BREVO_API_KEY:
+        raise RuntimeError("BREVO_API_KEY is not configured — cannot send verification email.")
+
+    response = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={
+            "api-key": settings.BREVO_API_KEY,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        json={
+            "sender": {"name": "CampusCook", "email": settings.EMAIL_HOST_USER},
+            "to": [{"email": email}],
+            "subject": subject,
+            "textContent": text_message,
+        },
+        timeout=10,
     )
+
+    # Brevo returns 201 Created on success; anything else is a real failure,
+    # so raise so the existing try/except in signup_view / resend_2fa can
+    # catch it and show the "couldn't send email, tap Resend" message.
+    if response.status_code >= 400:
+        raise RuntimeError(
+            f"Brevo API error {response.status_code}: {response.text}"
+        )
 
 def _mask_email(email):
     """Return a masked version of the email, e.g. j***@gmail.com"""

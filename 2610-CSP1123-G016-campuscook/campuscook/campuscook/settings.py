@@ -43,6 +43,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['campuscook-a1ti.onrender.com', '127.0.0.1', 'localhost']
 
+# Render terminates HTTPS at its proxy and forwards to your app over HTTP,
+# so Django needs to be told (a) the browser's origin is trusted for POST
+# forms, and (b) to treat the request as secure based on Render's header.
+CSRF_TRUSTED_ORIGINS = ['https://campuscook-a1ti.onrender.com']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Application definition
 
@@ -119,10 +125,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-CSRF_TRUSTED_ORIGINS = ['https://campuscook-a1ti.onrender.com']
-
-# Tells Django to trust Render's proxy header for "this request was HTTPS"
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
@@ -135,7 +137,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-# ── Gmail SMTP Email Configuration ──────────────────────────────────────────
+# ── Gmail SMTP Email Configuration (kept for reference / fallback use) ──────
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -152,6 +154,15 @@ EMAIL_HOST_USER = env('EMAIL_USER', default='wearecampuscook@gmail.com')
 # treat it as compromised and regenerate a new App Password in your Google
 # Account settings, then revoke the old one.
 EMAIL_HOST_PASSWORD = env('EMAIL_PASSWORD', default='')
+
+# ── Brevo transactional email API (used for 2FA codes) ──────────────────────
+# Render's free tier blocks outbound SMTP ports (25/465/587), so 2FA emails
+# are sent via Brevo's HTTPS API instead of Django's SMTP backend — see
+# _send_2fa_email() in pages/views.py. Set BREVO_API_KEY as an environment
+# variable (Render dashboard → Environment, or local .env — never commit it).
+# Get a key at https://app.brevo.com/settings/keys/api after verifying your
+# sender address (wearecampuscook@gmail.com) under Senders & IP.
+BREVO_API_KEY = env('BREVO_API_KEY', default='')
 
 # Default sender profile fallback
 DEFAULT_FROM_EMAIL = f'CampusCook <{EMAIL_HOST_USER}>'

@@ -67,7 +67,31 @@ def aggregate_grocery_items(items):
 
 # ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
-    return render(request, "pages/home.html")
+    recipe_count = Recipe.objects.count()
+
+    # Same ranking used on the Popular page — top 10 most-favourited recipes.
+    ranked_recipes = list(
+        Recipe.objects.annotate(favourite_count=Count('favourited_by'))
+        .filter(favourite_count__gt=0)
+        .order_by('-favourite_count', 'name')[:10]
+    )
+
+    top_three = ranked_recipes[:3]
+    remaining = ranked_recipes[3:]
+    max_favourites = ranked_recipes[0].favourite_count if ranked_recipes else 0
+
+    # Fallback: if nothing has been favourited yet, spotlight the newest recipes instead
+    spotlight_recipes = ranked_recipes
+    if not spotlight_recipes:
+        spotlight_recipes = list(Recipe.objects.order_by('-id')[:6])
+
+    return render(request, "pages/home.html", {
+        "recipe_count": recipe_count,
+        "top_three": top_three,
+        "remaining": remaining,
+        "max_favourites": max_favourites,
+        "spotlight_recipes": spotlight_recipes,
+    })
 
 # ── About ─────────────────────────────────────────────────────────────────────
 def about(request):
@@ -470,6 +494,56 @@ def add_recipe(request):
 
     return render(request, 'pages/add_recipe.html', {
         'form': form,
+        'all_ingredients': all_ingredients,
+    })
+
+# ── Edit recipe (owner only) ───────────────────────────────────────────────────
+@login_required
+def edit_recipe(request, id):
+    recipe = get_object_or_404(Recipe, id=id)
+
+    if recipe.user != request.user:
+        messages.error(request, "You can only edit recipes you created.")
+        return redirect('recipe_detail', id=recipe.id)
+
+    if request.method == 'POST':
+        form = RecipeForm(request.POST, request.FILES, instance=recipe)
+
+        if form.is_valid():
+            updated_recipe = form.save(commit=False)
+            updated_recipe.user = recipe.user
+            updated_recipe.save()
+            form.save_m2m()
+
+            # Handle any new custom ingredients typed in on the edit form,
+            # same as add_recipe.
+            new_ingredients_str = request.POST.get('new_ingredients', '').strip()
+            new_ingredients = []
+            if new_ingredients_str:
+                for name in new_ingredients_str.split(','):
+                    name = name.strip()
+                    if name:
+                        ing, _ = Ingredient.objects.get_or_create(
+                            name__iexact=name,
+                            defaults={'name': name},
+                        )
+                        new_ingredients.append(ing)
+
+            if new_ingredients:
+                updated_recipe.ingredients.add(*new_ingredients)
+
+            messages.success(request, f'"{updated_recipe.name}" has been updated!')
+            return redirect('recipe_detail', id=updated_recipe.id)
+        else:
+            messages.error(request, 'Please fix the errors below.')
+    else:
+        form = RecipeForm(instance=recipe)
+
+    all_ingredients = Ingredient.objects.all().order_by('name')
+
+    return render(request, 'pages/edit_recipe.html', {
+        'form': form,
+        'recipe': recipe,
         'all_ingredients': all_ingredients,
     })
 

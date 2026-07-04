@@ -53,6 +53,9 @@
                         onclick="shareRecipe(this)">🔗 Share
                     </button>
                     {% if user.is_authenticated and recipe.user == user %}
+                    <a class="btn_action btn_edit" href="{% url 'edit_recipe' recipe.id %}">
+                        ✏️ Edit
+                    </a>
                     <button class="btn_action btn_delete"
                         onclick="event.stopPropagation(); deleteRecipe({{ recipe.id }})">
                         🗑 Delete
@@ -253,6 +256,8 @@
     .btn_fav_active:hover { background: var(--berry-dark) !important; border-color: var(--berry-dark) !important; cursor: default; }
     .btn_share  { background: var(--sage-pale); color: #4C6478; border-color: #6E8A9E; }
     .btn_share:hover { background: #6E8A9E; color: var(--paper); }
+    .btn_edit   { background: var(--terracotta-pale); color: var(--gold-dark); border-color: var(--gold); }
+    .btn_edit:hover { background: var(--gold); color: var(--paper); }
     .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(58,43,34,0.35); z-index: 300; }
     .popup-overlay.open { display: block; }
     .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--paper); border-radius: 22px; padding: 2rem; min-width: 300px; max-width: 420px; width: 90%; z-index: 301; box-shadow: 0 20px 60px rgba(58,43,34,0.2); }

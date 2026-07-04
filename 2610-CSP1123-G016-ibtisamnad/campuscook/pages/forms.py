@@ -53,7 +53,7 @@ class RecipeForm(forms.ModelForm):
     class Meta:
         model  = Recipe
         # user and filters are excluded — user is set automatically in the view
-        fields = ('name', 'cooking_time', 'appliance', 'instructions', 'image', 'ingredients', 'is_halal', 'budget')
+        fields = ('name', 'cooking_time', 'appliance', 'instructions', 'image', 'ingredients', 'is_halal', 'budget', 'meal_type')
 
 class FeedbackForm(forms.ModelForm):
     class Meta:

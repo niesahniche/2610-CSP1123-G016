@@ -100,63 +100,65 @@
     /* ── Nav ─────────────────────────────────────────── */
         nav {
             background: var(--paper);
-            padding: 0.5rem 2rem;
+            padding: 0.6rem 2rem;
             border-bottom: 1.5px solid var(--tan);
             position: sticky; top: 0; z-index: 40;
         }
 
-        nav ul {
-            list-style: none;
-            margin: 0; padding: 0;
+        .nav_inner {
             display: flex;
             align-items: center;
-            gap: 0.2rem;
+            justify-content: space-between;
+            gap: 1rem;
             flex-wrap: wrap;
             max-width: 1080px;
             margin: 0 auto;
         }
 
-        nav ul li:first-child a {
+        .nav_brand {
             font-family: 'Fraunces', Georgia, serif;
             font-weight: 700;
             font-size: 1.05rem;
             color: var(--terracotta-dark);
-            padding-left: 0.4rem;
-            margin-right: 0.6rem;
+            text-decoration: none;
+            flex-shrink: 0;
         }
-        nav ul li:first-child a:hover { background: transparent; color: var(--terracotta); }
+        .nav_brand:hover { color: var(--terracotta); }
 
-        nav ul li a {
-            display: block;
-            padding: 0.7rem 1rem;
+        .nav_links {
+            list-style: none;
+            margin: 0; padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .nav_btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1.1rem;
+            border: 1.5px solid var(--tan);
+            border-radius: 999px;
+            background: var(--paper);
             color: var(--brown-soft);
             text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 600;
-            letter-spacing: 0.2px;
-            border-radius: 999px;
-            transition: background 0.2s, color 0.2s;
-        }
-
-        nav ul li a:hover {
-            background: var(--sage-pale);
-            color: var(--sage-dark);
-        }
-
-        nav ul li:last-child, nav ul li:nth-last-child(2) { margin-left: auto; }
-
-        .nav_logout_btn {
-            background: none;
-            border: 1.5px solid var(--tan);
-            color: var(--brown-soft);
-            padding: 0.45rem 1rem;
-            border-radius: 999px;
             font-size: 0.86rem;
             font-weight: 600;
-            cursor: pointer;
+            letter-spacing: 0.2px;
             font-family: inherit;
-            transition: background 0.2s, color 0.2s, border-color 0.2s;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
         }
+
+        .nav_btn:hover {
+            background: var(--sage-pale);
+            color: var(--sage-dark);
+            border-color: var(--sage);
+            transform: translateY(-1px);
+        }
+
         .nav_logout_btn:hover { background: var(--rose-pale); color: var(--rose-dark); border-color: var(--rose); }
 
     /* ── Page wrapper ────────────────────────────────── */
@@ -409,28 +411,33 @@
     </div>
 
     <nav>
-        <ul>
-            <li><a href="{% url 'home' %}">Campus Cook</a></li>
-            <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'grocery' %}">Grocery</a></li>
-            <li><a href="{% url 'recipe_list' %}">Recipes</a></li>
-            <li><a href="{% url 'popular' %}">Popular</a></li>
-            <li><a href="{% url 'about' %}">About</a></li>
-            <li><a href="{% url 'feedback' %}">Feedback</a></li>
-            {% if user.is_authenticated %}
-                <li><a href="{% url 'profile' %}">Profile</a></li>
-                <li>
-                    <!-- logout must be POST — using a small form instead of a link -->
-                    <form method="POST" action="{% url 'logout' %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="nav_logout_btn">Logout</button>
-                    </form>
-                </li>
-            {% else %}
-                <li><a href="{% url 'login' %}">Login</a></li>
-                <li><a href="{% url 'signup' %}">Sign Up</a></li>
-            {% endif %}
-        </ul>
+        <div class="nav_inner">
+            <a href="{% url 'home' %}" class="nav_brand">Campus Cook</a>
+            <ul class="nav_links">
+                <li><a href="{% url 'home' %}" class="nav_btn">Home</a></li>
+                <li><a href="{% url 'grocery' %}" class="nav_btn">Grocery</a></li>
+                <li><a href="{% url 'recipe_list' %}" class="nav_btn">Recipes</a></li>
+                {% if user.is_authenticated %}
+                    <li><a href="{% url 'profile' %}" class="nav_btn">Profile</a></li>
+                {% endif %}
+                <li><a href="{% url 'about' %}" class="nav_btn">About</a></li>
+            </ul>
+            <ul class="nav_links">
+                <li><a href="{% url 'feedback' %}" class="nav_btn">Feedback</a></li>
+                {% if user.is_authenticated %}
+                    <li>
+                        <!-- logout must be POST — using a small form instead of a link -->
+                        <form method="POST" action="{% url 'logout' %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="nav_btn nav_logout_btn">Logout</button>
+                        </form>
+                    </li>
+                {% else %}
+                    <li><a href="{% url 'login' %}" class="nav_btn">Login</a></li>
+                    <li><a href="{% url 'signup' %}" class="nav_btn">Sign Up</a></li>
+                {% endif %}
+            </ul>
+        </div>
     </nav>
 
     {% block content %}

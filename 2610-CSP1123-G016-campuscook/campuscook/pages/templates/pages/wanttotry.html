@@ -380,6 +380,7 @@
         headers: { 'X-CSRFToken': getCookie('csrftoken') },
       });
       if (!res.ok) throw new Error();
+      const data = await res.json();
       const card = document.getElementById(`wtt-card-${recipeId}`);
       if (card) {
         card.style.transition = 'opacity 0.3s';
@@ -393,7 +394,13 @@
         if (remaining === 0) location.reload();        // show empty state
         else countEl.textContent = `${remaining} recipe${remaining !== 1 ? 's' : ''} saved`;
       }
-      showToast('Removed from Want to Try', '');
+      const cleanedItems = (data.updated_item_count || 0) + (data.deleted_missing_count || 0);
+      showToast(
+        cleanedItems
+          ? `Removed from Want to Try and cleaned ${cleanedItems} grocery item${cleanedItems !== 1 ? 's' : ''}`
+          : 'Removed from Want to Try',
+        ''
+      );
     } catch {
       showToast('Could not remove. Try again.', 'error');
       btn.disabled = false;

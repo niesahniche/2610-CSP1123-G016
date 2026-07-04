@@ -65,6 +65,35 @@ def aggregate_grocery_items(items):
         entry['for_recipe'] = ', '.join(dict.fromkeys(entry['for_recipe']))
     return list(grouped.values())
 
+
+def cleanup_grocery_labels_for_recipe(user, recipe_name):
+    grocery_items = (
+        Grocery.objects.filter(user=user)
+        .exclude(for_recipe__isnull=True)
+        .exclude(for_recipe__exact='')
+    )
+    deleted_missing_count = 0
+    updated_item_count = 0
+
+    for item in grocery_items:
+        updated_label = remove_recipe_label(item.for_recipe, recipe_name)
+        if updated_label == (item.for_recipe or ''):
+            continue
+
+        if item.status == 'missing' and not updated_label:
+            item.delete()
+            deleted_missing_count += 1
+            continue
+
+        item.for_recipe = updated_label
+        item.save(update_fields=['for_recipe'])
+        updated_item_count += 1
+
+    return {
+        'deleted_missing_count': deleted_missing_count,
+        'updated_item_count': updated_item_count,
+    }
+
 # ── Home ──────────────────────────────────────────────────────────────────────
 def home(request):
     recipe_count = Recipe.objects.count()
@@ -747,7 +776,12 @@ def toggle_want_to_try(request, recipe_id):
 
     # DELETE — remove from list
     WantToTry.objects.filter(user=user, recipe=recipe).delete()
-    return JsonResponse({'saved': False})
+    cleanup = cleanup_grocery_labels_for_recipe(user, recipe.name)
+    return JsonResponse({
+        'saved': False,
+        'deleted_missing_count': cleanup['deleted_missing_count'],
+        'updated_item_count': cleanup['updated_item_count'],
+    })
 
 # ── Ingredient check API — Step 1: returns available/missing lists ────────────
 # Called from recipe detail page when user clicks "Check Ingredients"

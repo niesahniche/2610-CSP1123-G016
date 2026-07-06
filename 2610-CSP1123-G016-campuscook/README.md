@@ -76,7 +76,7 @@ py -m pip install -r requirements.txt
 If the `requirements.txt` file is incomplete, install the packages manually:
 
 ```powershell
-py -m pip install django python-dotenv requests pillow
+py -m pip install django django-environ python-dotenv requests pillow
 ```
 
 ## 5. Apply Database Migrations

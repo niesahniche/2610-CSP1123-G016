@@ -47,8 +47,8 @@ Avoid using Python 3.14 because it may cause Pillow installation errors on Windo
 Open Command Prompt or VS Code terminal, then go to the project folder:
 
 ```powershell
-cd 2610-CSP1123-G016-main
-cd 2610-CSP1123-G016-campuscook
+cd 2610-CSP1123-G016-main/2610-CSP1123-G016-campuscook/campuscook
+
 ```
 
 ## 3. Create a Virtual Environment

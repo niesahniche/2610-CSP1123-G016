@@ -1,0 +1,572 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<main class="grocery_page">
+  <h1>My Grocery List</h1>
+
+  <form method="POST" class="add_form" id="unified_add_form">
+    {% csrf_token %}
+
+    <div class="form_section">
+      <h3 class="form_section_title">Add from Existing List</h3>
+      <!-- Ingredient dropdown -->
+      <div class="form_group_select">
+        <select name="ingredient_id" id="ingredient_select" class="ingredient_select_dropdown">
+          <option value="">-- Select ingredient --</option>
+          {% for ingredient in all_ingredients %}
+            <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form_section">
+      <h3 class="form_section_title">Or Add Custom Ingredient</h3>
+      <!-- Custom ingredient input -->
+      <input
+        type="text"
+        id="new_ingredients_input"
+        name="new_ingredients"
+        placeholder="Add one custom ingredient"
+        class="form_input_full"
+      />
+      <div id="new_ingredients_tags" class="ingredients_tags"></div>
+    </div>
+
+    <!-- Shared: Quantity -->
+    <div class="form_section shared_inputs">
+      <h3 class="form_section_title">Details</h3>
+      <div class="inputs_row">
+        <!-- Quantity dropdown -->
+        <select name="quantity" id="quantity_select" class="form_input_quantity">
+          <option value="1" selected>Qty: 1</option>
+          <option value="2">Qty: 2</option>
+          <option value="3">Qty: 3</option>
+          <option value="4">Qty: 4</option>
+          <option value="5">Qty: 5</option>
+          <option value="6">Qty: 6</option>
+          <option value="7">Qty: 7</option>
+          <option value="8">Qty: 8</option>
+          <option value="9">Qty: 9</option>
+          <option value="10">Qty: 10</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Hidden action field to track which action to perform -->
+    <input type="hidden" name="action" id="action_field" value="add_from_dropdown">
+
+    <!-- Button to submit -->
+    <button type="submit" id="unified_submit_btn" class="form_btn">
+      <span class="btn_icon">+</span> Add
+    </button>
+  </form>
+
+  <div class="grocery_sections">
+
+    <div class="grocery_section">
+      <h2 class="section_heading available_heading">
+        ✅ Available <span class="count">({{ available|length }})</span>
+      </h2>
+      {% if completed_recipes %}
+      <div class="completed_section">
+        <h3 class="subheading completed_heading">Now I can cook</h3>
+        <ul class="completed_list">
+          {% for recipe_name in completed_recipes %}
+            <li class="completed_item">
+              <span>{{ recipe_name }}</span>
+              <form method="post" action="{% url 'complete_recipe' %}" class="recipe_complete_form">
+                {% csrf_token %}
+                <input type="hidden" name="recipe_name" value="{{ recipe_name }}">
+                <button type="submit" class="btn_complete_recipe">Done ✓</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      <ul class="grocery_list">
+        {% for item in available %}
+          <li class="grocery_item">
+            <div class="item_info">
+              <span class="item_name">{{ item.name }}</span>
+              {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+              {% if item.for_recipe %}<span class="item_for">for: {{ item.for_recipe }}</span>{% endif %}
+              {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
+            </div>
+            <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
+          </li>
+        {% empty %}
+          <li class="empty_msg">No available ingredients yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="grocery_section">
+      <h2 class="section_heading missing_heading">
+        ❌ Missing <span class="count">({{ missing_count }})</span>
+      </h2>
+
+      <div class="missing_subsection">
+        <h3 class="subheading">Still missing <span class="count">({{ missing|length }})</span></h3>
+        <ul class="grocery_list">
+          {% for item in missing %}
+            <li class="grocery_item missing_item">
+              <div class="item_info">
+                <span class="item_name">{{ item.name }}</span>
+                {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+                {% if item.for_recipe %}
+                  <span class="item_for">needed for: {{ item.for_recipe }}</span>
+                {% endif %}
+                {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
+              </div>
+              <div class="item_actions">
+                <a href="{% url 'purchase_item' item.id %}" class="btn_got_it">Got it ✓</a>
+                <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
+              </div>
+            </li>
+          {% empty %}
+            <li class="empty_msg">No missing ingredients — you're all set!</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="missing_subsection purchased_section">
+        <div class="purchased_header">
+          <h3 class="subheading purchased_heading">Purchased <span class="count">({{ purchased|length }})</span></h3>
+          {% if purchased %}
+            <form method="post" action="{% url 'transfer_purchased_to_available' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn_transfer">Move all purchased to available</button>
+            </form>
+          {% endif %}
+        </div>
+        <ul class="grocery_list">
+          {% for item in purchased %}
+            <li class="grocery_item purchased_item">
+              <div class="item_info">
+                <span class="item_name">{{ item.name }}</span>
+                {% if item.custom_name %}<span class="item_custom">({{ item.custom_name }})</span>{% endif %}
+                {% if item.for_recipe %}
+                  <span class="item_for">needed for: {{ item.for_recipe }}</span>
+                {% endif %}
+                {% if item.quantity %}<span class="item_quantity">{{ item.quantity }}</span>{% endif %}
+              </div>
+              <div class="item_actions">
+                <a href="{% url 'remove_item' item.id %}" class="btn_remove">Remove</a>
+              </div>
+            </li>
+          {% empty %}
+            <li class="empty_msg">No purchased ingredients yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<style>
+  .grocery_page { max-width: 1128px; margin: 3rem auto; padding: 0 1.5rem 4rem; }
+  .grocery_page h1 { font-family: Georgia, "Times New Roman", serif; font-size: 2.65rem; font-weight: 800; color: #101820; margin-bottom: 2.25rem; border-bottom: 3px solid #dfd2bd; padding-bottom: 1rem; }
+
+  /* Unified add form styling */
+  .add_form {
+    background: rgba(255, 252, 248, 0.72);
+    border: 2px solid #e4d7c1;
+    border-radius: 14px;
+    padding: 1.8rem;
+    margin-bottom: 2.35rem;
+    box-shadow: 0 2px 10px rgba(73, 53, 28, 0.06);
+  }
+
+  .form_section {
+    margin-bottom: 1.2rem;
+  }
+
+  .form_section:last-of-type:not(.shared_inputs) {
+    margin-bottom: 1.5rem;
+  }
+
+  .form_section_title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #2f6f53;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    margin-bottom: 0.6rem;
+  }
+
+  /* Select2 dropdown styling */
+  .form_group_select { width: 100%; }
+  .ingredient_select_dropdown {
+    width: 100%;
+    padding: 0.78rem 1.1rem;
+    border: 2px solid #cfcfcf;
+    border-radius: 9px;
+    font-size: 1rem;
+    outline: none;
+    background: white;
+  }
+  .ingredient_select_dropdown:focus { border-color: #7fcea0; box-shadow: 0 0 0 3px rgba(127, 206, 160, 0.18); }
+
+  /* Shared inputs row */
+  .shared_inputs .inputs_row {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  /* Quantity input */
+  .form_input_quantity {
+    flex: 0.9;
+    min-width: 100px;
+    padding: 0.78rem 1.1rem;
+    border: 2px solid #cfcfcf;
+    border-radius: 9px;
+    font-size: 1rem;
+    outline: none;
+  }
+  .form_input_quantity:focus { border-color: #7fcea0; box-shadow: 0 0 0 3px rgba(127, 206, 160, 0.18); }
+
+  /* Custom label input */
+  .form_input_custom {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.78rem 1.1rem;
+    border: 2px solid #cfcfcf;
+    border-radius: 9px;
+    font-size: 1rem;
+    outline: none;
+  }
+  .form_input_custom:focus { border-color: #7fcea0; box-shadow: 0 0 0 3px rgba(127, 206, 160, 0.18); }
+
+  .form_input {
+    padding: 0.78rem 1.1rem;
+    border: 2px solid #cfcfcf;
+    border-radius: 9px;
+    font-size: 1rem;
+    outline: none;
+  }
+  .form_input:focus { border-color: #7fcea0; box-shadow: 0 0 0 3px rgba(127, 206, 160, 0.18); }
+
+  .form_btn {
+    width: 100%;
+    padding: 0.85rem 1.35rem;
+    background: #7ccd96;
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(84, 151, 104, 0.2);
+  }
+  .form_btn:hover {
+    background: #67bc80;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(84, 151, 104, 0.28);
+  }
+  .btn_icon { font-size: 1.1rem; font-weight: bold; }
+
+  .form_input_full {
+    width: 100%;
+    padding: 0.78rem 1.1rem;
+    border: 2px solid #cfcfcf;
+    border-radius: 9px;
+    font-size: 1rem;
+    outline: none;
+    margin-bottom: 0.6rem;
+  }
+  .form_input_full:focus { border-color: #7fcea0; box-shadow: 0 0 0 3px rgba(127, 206, 160, 0.18); }
+
+  .ingredients_tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+  .ingredient_tag {
+    background: #eef9f2;
+    color: #235f4a;
+    border: 1.5px solid #7ccd96;
+    border-radius: 20px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(106, 195, 131, 0.15);
+  }
+
+  .grocery_sections { display: grid; grid-template-columns: 1fr 1fr; gap: 2.25rem; }
+  @media (max-width: 600px) { .grocery_sections { grid-template-columns: 1fr; } }
+  .grocery_section {
+    background: rgba(255, 252, 248, 0.72);
+    border: 2px solid #e4d7c1;
+    border-radius: 14px;
+    padding: 1.8rem;
+    box-shadow: 0 2px 10px rgba(73, 53, 28, 0.06);
+  }
+  .section_heading { font-family: Georgia, "Times New Roman", serif; font-size: 1.45rem; font-weight: 800; margin-bottom: 1.5rem; padding-bottom: 0.65rem; border-bottom: 3px solid; }
+  .available_heading { color: #175f55; border-color: #67c88b; }
+  .missing_heading   { color: #b95e32; border-color: #edae22; }
+  .count { font-size: 0.8rem; font-weight: 400; color: #888; }
+  .grocery_list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+  .completed_section { margin-bottom: 1rem; }
+  .completed_list { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+  .completed_item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid #d9efe0;
+    border-radius: 10px;
+    background: #f4fcf6;
+  }
+  .recipe_complete_form { display: inline-flex; }
+  .btn_complete_recipe {
+    border: none;
+    background: #67bc80;
+    color: #fff;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn_complete_recipe:hover { background: #4f9a66; }
+  .grocery_item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.8rem;
+    border: 1.5px solid #eee4d8;
+    border-radius: 10px;
+    background: #fbf7f0;
+    flex-wrap: wrap;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .grocery_item:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+  .missing_item { background: #fff8f3; border-color: #f3d8ca; }
+  .item_info { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+  .item_name   { font-family: Georgia, "Times New Roman", serif; font-size: 1.05rem; font-weight: 800; color: #171717; }
+  .item_custom { font-size: 0.78rem; color: #888; }
+  .item_quantity { font-size: 0.8rem; color: #2f6f53; font-weight: 700; background: rgba(127, 206, 160, 0.16); padding: 0.1rem 0.5rem; border-radius: 4px; display: inline-block; width: fit-content; }
+  .item_for    { font-size: 0.75rem; color: #b85c38; font-style: italic; }
+  .item_actions { display: flex; gap: 0.4rem; }
+  .btn_remove {
+    font-size: 0.75rem;
+    color: #b85c38;
+    text-decoration: none;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid #f0b4ae;
+    border-radius: 5px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .purchased_section { margin-top: 1rem; }
+  .purchased_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .purchased_heading { font-size: 0.95rem; color: #2a6f75; border-color: #7fbfc4; margin-top: 0.8rem; }
+  .purchased_item { background: #f3fbfa; border-color: #d2e9e6; }
+  .btn_transfer {
+    border: 1.5px solid #6fb9be;
+    background: linear-gradient(135deg, #eef9fa 0%, #dff2f3 100%);
+    color: #1f5f65;
+    padding: 0.55rem 0.95rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(60, 125, 131, 0.14);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+  }
+  .btn_transfer:hover {
+    background: linear-gradient(135deg, #7fbfc4 0%, #5faab2 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(60, 125, 131, 0.2);
+  }
+  .btn_remove:hover { background: #fdf0ee; color: #d64a3d; }
+  .btn_got_it {
+    font-size: 0.75rem;
+    color: #2d6a4f;
+    text-decoration: none;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid #6ac383;
+    border-radius: 5px;
+    background: #eef9f2;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .btn_got_it:hover {
+    background: #67bc80;
+    color: #fff;
+  }
+  .empty_msg { font-size: 0.85rem; color: #aaa; font-style: italic; padding: 0.4rem 0; }
+
+  /* Select2 custom styling */
+  .select2-container--default .select2-selection--single {
+    border: 2px solid #cfcfcf !important;
+    border-radius: 9px !important;
+    height: 44px;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #111;
+    padding: 0.4rem 0.8rem;
+  }
+  .select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #7fcea0 !important;
+    box-shadow: 0 0 0 3px rgba(127, 206, 160, 0.18) !important;
+  }
+  .select2-dropdown {
+    border-color: #7fcea0 !important;
+  }
+  .select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1.5px solid #cfcfcf !important;
+    border-radius: 4px !important;
+  }
+  .select2-results__option--highlighted {
+    background-color: #7ccd96 !important;
+  }
+
+  .autocomplete_results {
+    list-style: none;
+    position: absolute;
+    z-index: 100;
+    background: #fff;
+    border: 1.5px solid #7fcea0;
+    border-radius: 9px;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-top: 2px;
+  }
+  .autocomplete_item {
+    padding: 0.5rem 0.9rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .autocomplete_item:hover { background: #eef9f2; color: #235f4a; }
+  .form_group_select { position: relative; }
+</style>
+
+<script>
+  // Handle ingredient autocomplete and form submission logic
+  document.addEventListener('DOMContentLoaded', function() {
+    const ingredientSelect = document.getElementById('ingredient_select');
+    const newIngredientsInput = document.getElementById('new_ingredients_input');
+    const actionField = document.getElementById('action_field');
+    const form = document.getElementById('unified_add_form');
+    const submitBtn = document.getElementById('unified_submit_btn');
+
+    // Handle ingredient autocomplete
+    if (ingredientSelect) {
+      const wrapper = ingredientSelect.parentElement;
+
+      // create text input
+      const textInput = document.createElement('input');
+      textInput.type        = 'text';
+      textInput.id          = 'ingredient_autocomplete';
+      textInput.placeholder = '-- Search ingredient --';
+      textInput.className   = 'ingredient_select_dropdown';
+      textInput.autocomplete = 'off';
+
+      // create hidden input to hold the actual ID
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'ingredient_id';
+      hiddenInput.id   = 'ingredient_id_hidden';
+
+      // create dropdown results list
+      const resultsList = document.createElement('ul');
+      resultsList.id        = 'ingredient_results';
+      resultsList.className = 'autocomplete_results';
+      resultsList.style.display = 'none';
+
+      wrapper.replaceChild(textInput, ingredientSelect);
+      wrapper.appendChild(hiddenInput);
+      wrapper.appendChild(resultsList);
+
+      // fetch matching ingredients from API on input
+      textInput.addEventListener('input', async function() {
+        const q = this.value.trim();
+        hiddenInput.value = ''; // clear selection when typing
+
+        if (q.length < 1) { resultsList.style.display = 'none'; return; }
+
+        try {
+          const res  = await fetch(`/api/ingredients/?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+
+          resultsList.innerHTML = '';
+          if (!data.length) { resultsList.style.display = 'none'; return; }
+
+          data.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent        = item.name;
+            li.dataset.id         = item.id;
+            li.className          = 'autocomplete_item';
+            li.addEventListener('click', () => {
+              textInput.value   = item.name;
+              hiddenInput.value = item.id;
+              resultsList.style.display = 'none';
+            });
+            resultsList.appendChild(li);
+          });
+
+          resultsList.style.display = 'block';
+        } catch (err) {
+          console.error('Ingredient search error:', err);
+        }
+      });
+
+      // hide results on outside click
+      document.addEventListener('click', function(e) {
+        if (!wrapper.contains(e.target)) resultsList.style.display = 'none';
+      });
+    }
+
+    // Handle new ingredient preview tag for single custom ingredient
+    if (newIngredientsInput) {
+      newIngredientsInput.addEventListener('input', function () {
+        const tagContainer = document.getElementById('new_ingredients_tags');
+        const cleaned = this.value.replace(/,/g, '');
+        if (cleaned !== this.value) this.value = cleaned;
+
+        const previewValue = cleaned.trim();
+        tagContainer.innerHTML = previewValue ? `<span class="ingredient_tag">+ ${previewValue}</span>` : '';
+      });
+    }
+
+    // Handle form submission to determine action
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        const ingredientId = document.getElementById('ingredient_id_hidden').value;
+        const newIngredients = newIngredientsInput.value.trim();
+
+        // Determine which action to use
+        if (ingredientId) {
+          actionField.value = 'add_from_dropdown';
+        } else if (newIngredients) {
+          actionField.value = 'add_new_ingredients';
+        } else {
+          e.preventDefault();
+          alert('Please select an ingredient or enter new ones to add.');
+        }
+      });
+    }
+  });
+</script>
+
+{% endblock %}

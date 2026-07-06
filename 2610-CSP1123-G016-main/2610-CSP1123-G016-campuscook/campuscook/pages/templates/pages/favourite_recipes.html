@@ -1,0 +1,126 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<style>
+  .saved_recipes { max-width: 720px; margin: 2.5rem auto; padding: 0 1.5rem 4rem; }
+  .saved_recipes h1 {
+    font-size: 1.9rem; font-weight: 800; color: var(--brown);
+    border-bottom: 2px solid var(--tan); padding-bottom: 0.7rem; margin-bottom: 0.5rem;
+  }
+  .recipe_count { font-size: 0.88rem; color: #999; margin-bottom: 1.5rem; }
+
+  .loading { color: #aaa; font-style: italic; font-size: 0.9rem; }
+
+  .recipe_list { display: flex; flex-direction: column; gap: 0.8rem; }
+
+  .saved_card {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    background: #fff; border: 1.5px solid var(--tan); border-radius: 10px;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 2px 6px rgba(44,37,32,0.06);
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .saved_card:hover { box-shadow: 0 6px 18px rgba(44,37,32,0.1); transform: translateY(-1px); }
+
+  .saved_title {
+    font-size: 1rem; font-weight: 600; color: var(--brown);
+    text-decoration: none; flex: 1;
+  }
+  .saved_title:hover { color: var(--green-dark); }
+
+  .btn_unsave {
+    padding: 0.4rem 0.9rem;
+    background: #fff8f5; color: var(--red-soft);
+    border: 1.5px solid #f0b4ae; border-radius: 6px;
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+  }
+  .btn_unsave:hover { background: var(--red-soft); color: #fff; border-color: var(--red-soft); }
+</style>
+
+<main class="saved_recipes">
+
+    <h1>My Saved Recipes</h1>
+    <p id="recipe-count" class="recipe_count">Loading…</p>
+
+    <div class="recipe_list" id="saved-list">
+        <p class="loading">Fetching saved recipes…</p>
+    </div>
+
+</main>
+
+<script>
+    const LIST_URL   = "{% url 'favourite_recipe_list' %}";
+    const TOGGLE_URL = "/api/toggle-favourite/";
+
+    async function loadSaved() {
+        const listEl  = document.getElementById('saved-list');
+        const countEl = document.getElementById('recipe-count');
+
+        try {
+            const res  = await fetch(LIST_URL);
+            const data = await res.json();
+
+            if (!data.length) {
+                listEl.innerHTML    = '<p>No saved recipes yet.</p>';
+                countEl.textContent = '0 recipes saved';
+                return;
+            }
+
+            countEl.textContent = `${data.length} recipe${data.length !== 1 ? 's' : ''} saved`;
+
+            listEl.innerHTML = data.map(item => `
+                <div class="saved_card" id="fav-${item.fav_id}">
+                    <a href="/recipes-detail/${item.recipe_id}/" class="saved_title">
+                        ${escHtml(item.title)}
+                    </a>
+                    <button class="btn_unsave" onclick="unfavourite(${item.recipe_id}, ${item.fav_id}, this)">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+
+        } catch (err) {
+            listEl.innerHTML = '<p>Could not load saved recipes.</p>';
+            console.error(err);
+        }
+    }
+
+    async function unfavourite(recipeId, favId, btn) {
+        if (!confirm('Remove this recipe from saved?')) return;
+        try {
+            const res = await fetch(`${TOGGLE_URL}${recipeId}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            });
+            if (!res.ok) throw new Error('Delete failed');
+
+            document.getElementById(`fav-${favId}`).remove();
+            const remaining = document.querySelectorAll('.saved_card').length;
+            document.getElementById('recipe-count').textContent =
+                `${remaining} recipe${remaining !== 1 ? 's' : ''} saved`;
+
+        } catch (err) {
+            alert('Could not remove. Try again.');
+            console.error(err);
+        }
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    function escHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    loadSaved();
+</script>
+
+{% endblock %}

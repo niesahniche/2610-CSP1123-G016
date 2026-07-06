@@ -1,0 +1,48 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card auth-card--center">
+        <div class="auth-icon-badge">📩</div>
+        <div class="auth-card-header">
+            <h1>Verify your identity</h1>
+            <p>We sent a 6-digit code to<br><strong>{{ masked_email }}</strong></p>
+        </div>
+
+        {% if messages %}
+            <div class="auth-messages">
+                {% for message in messages %}
+                    <div class="auth-message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'verify_2fa' %}">
+            {% csrf_token %}
+
+            <div class="auth-form-group">
+                <label for="id_code">Enter 6-digit code</label>
+                <input
+                    type="text"
+                    id="id_code"
+                    name="code"
+                    class="auth-code-input"
+                    maxlength="6"
+                    pattern="\d{6}"
+                    required
+                    placeholder="000000"
+                    autocomplete="one-time-code"
+                    inputmode="numeric"
+                    autofocus
+                />
+            </div>
+
+            <button type="submit" class="auth-btn-submit">Verify &amp; complete registration</button>
+        </form>
+
+        <hr class="auth-divider">
+
+        <p class="auth-footer-link">Didn't receive a code? <a href="{% url 'resend_2fa' %}">Resend code</a></p>
+    </div>
+</div>
+{% endblock %}

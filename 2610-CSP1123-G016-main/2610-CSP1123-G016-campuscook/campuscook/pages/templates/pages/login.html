@@ -1,0 +1,43 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-icon-badge">🥣</div>
+        <div class="auth-card-header">
+            <h1>Welcome back</h1>
+            <p>Log in to keep cooking with Campus&nbsp;Cook</p>
+        </div>
+
+        {% if form.non_field_errors or messages %}
+            <div class="auth-messages">
+                {% for error in form.non_field_errors %}
+                    <div class="auth-message error">{{ error }}</div>
+                {% endfor %}
+                {% for msg in messages %}
+                    <div class="auth-message {{ msg.tags|default:'error' }}">{{ msg }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'login' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+
+            <div class="auth-form-group">
+                <label for="id_username">Username or email</label>
+                <input type="text" id="id_username" name="username" placeholder="you@campus.edu" required>
+            </div>
+
+            <div class="auth-form-group">
+                <label for="id_password">Password</label>
+                <input type="password" id="id_password" name="password" required>
+            </div>
+
+            <button type="submit" class="auth-btn-submit">Log in</button>
+        </form>
+
+        <p class="auth-footer-link">Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+    </div>
+</div>
+{% endblock %}

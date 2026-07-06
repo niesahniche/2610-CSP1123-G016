@@ -1,0 +1,490 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<main class="add_recipe">
+
+    <h1>Add a New Recipe</h1>
+
+    <!-- POST to add_recipe view in views.py
+         view creates a new Recipe row in the database
+         then redirects to the new recipe's detail page        -->
+    <form method="POST" action="{% url 'add_recipe' %}" class="recipe_form" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Django form errors -->
+        {% if form.errors %}
+            <div class="form_error">
+                Please fix the errors below.
+            </div>
+        {% endif %}
+
+        <!-- Django messages -->
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- RECIPE NAME ─────────────────────────────────────────────────────
+             maps to Recipe.name (CharField) in models.py                   -->
+        <div class="form_group">
+            <label for="id_name">Recipe Name</label>
+            <input
+                type="text"
+                id="id_name"
+                name="name"
+                placeholder="e.g. Spicy Fried Rice"
+                required
+                value="{{ form.name.value|default:'' }}"
+            />
+            {% if form.name.errors %}
+                <ul class="errorlist">
+                    {% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- IMAGE  -->
+        <div class="form_group">
+            <label for="id_image">Recipe Photo (optional)</label>
+            <input type="file" id="id_image" name="image" accept="image/*" class="form_input"/>
+            {% if form.image.errors %}
+                <ul class="errorlist">{% for error in form.image.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+
+        <!-- HALAL — Recipe.is_halal (BooleanField) -->
+        <div class="form_group">
+            <label for="id_is_halal">Halal</label>
+            <select id="id_is_halal" name="is_halal">
+                <option value="True" {% if form.is_halal.value != False %}selected{% endif %}>✅ Halal</option>
+                <option value="False" {% if form.is_halal.value == False %}selected{% endif %}>❌ Non-Halal</option>
+            </select>
+        </div>
+
+        <!-- BUDGET — Recipe.budget (CharField with choices) -->
+        <div class="form_group">
+            <label for="id_budget">Budget Estimate</label>
+            <select id="id_budget" name="budget">
+                <option value="low"    {% if form.budget.value == 'low'    %}selected{% endif %}>Below RM5</option>
+                <option value="medium" {% if form.budget.value == 'medium' %}selected{% endif %}>RM5 – RM15</option>
+                <option value="high"   {% if form.budget.value == 'high'   %}selected{% endif %}>Above RM15</option>
+            </select>
+        </div>
+        
+        <!-- MEAL TYPE — Recipe.meal_type (CharField with choices) -->
+        <div class="form_group">
+            <label for="id_meal_type">Meal Type</label>
+            <select id="id_meal_type" name="meal_type">
+                <option value="breakfast" {% if form.meal_type.value == 'breakfast' %}selected{% endif %}>🌅 Breakfast</option>
+                <option value="lunch"     {% if form.meal_type.value == 'lunch'     %}selected{% endif %}>☀️ Lunch</option>
+                <option value="dinner"    {% if form.meal_type.value == 'dinner'    %}selected{% endif %}>🌙 Dinner</option>
+                <option value="snack"     {% if form.meal_type.value == 'snack'     %}selected{% endif %}>🍿 Snack</option>
+                <option value="dessert"   {% if form.meal_type.value == 'dessert'   %}selected{% endif %}>🍰 Dessert</option>
+                <option value="drinks"    {% if form.meal_type.value == 'drinks'    %}selected{% endif %}>🥤 Drinks</option>
+                <option value="other"     {% if form.meal_type.value == 'other'     %}selected{% endif %}>🍽️ Other</option>
+            </select>
+        </div>
+
+        <!-- COOKING TIME ────────────────────────────────────────────────────
+             maps to Recipe.cooking_time (IntegerField) in models.py        -->
+        <div class="form_group">
+            <label for="id_cooking_time">Cooking Time (minutes)</label>
+            <input
+                type="number"
+                id="id_cooking_time"
+                name="cooking_time"
+                placeholder="e.g. 30"
+                min="1"
+                required
+                value="{{ form.cooking_time.value|default:'' }}"
+            />
+            {% if form.cooking_time.errors %}
+                <ul class="errorlist">
+                    {% for error in form.cooking_time.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- APPLIANCE ───────────────────────────────────────────────────────
+             maps to Recipe.appliance (CharField) in models.py              -->
+        <div class="form_group">
+            <label for="id_appliance">Appliance</label>
+            <select id="id_appliance" name="appliance" required>
+                <option value="" disabled selected>Select an appliance</option>
+                <option value="none"      {% if form.appliance.value == 'none'      %}selected{% endif %}>No Appliance</option>
+                <option value="microwave" {% if form.appliance.value == 'microwave' %}selected{% endif %}>Microwave</option>
+                <option value="oven"      {% if form.appliance.value == 'oven'      %}selected{% endif %}>Oven</option>
+                <option value="stove"     {% if form.appliance.value == 'stove'     %}selected{% endif %}>Stove</option>
+                <option value="airfryer"  {% if form.appliance.value == 'airfryer'  %}selected{% endif %}>Air Fryer</option>
+                <option value="blender"   {% if form.appliance.value == 'blender'   %}selected{% endif %}>Blender</option>
+            </select>
+            {% if form.appliance.errors %}
+                <ul class="errorlist">
+                    {% for error in form.appliance.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- INSTRUCTIONS ────────────────────────────────────────────────────
+             maps to Recipe.instructions (TextField) in models.py           -->
+        <div class="form_group">
+            <label for="id_instructions">Instructions</label>
+            <textarea
+                id="id_instructions"
+                name="instructions"
+                rows="8"
+                placeholder="Step 1: ...&#10;Step 2: ...&#10;Step 3: ..."
+                required
+            >{{ form.instructions.value|default:'' }}</textarea>
+            {% if form.instructions.errors %}
+                <ul class="errorlist">
+                    {% for error in form.instructions.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- INGREDIENTS ─────────────────────────────────────────────────────
+             maps to Recipe.ingredients (ManyToManyField → Ingredient table)
+             user selects from existing ingredients via Select2 dropdown
+             or adds new ones via comma-separated input                     -->
+        <div class="form_group">
+            <label for="id_ingredients">Select Ingredients</label>
+            <select id="id_ingredients" name="ingredients" multiple class="ingredients_select_recipe">
+                {% for ingredient in form.ingredients.field.queryset %}
+                    <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+                {% endfor %}
+            </select>
+            <div id="selected_ingredients" class="selected_ingredients"></div>
+        </div>
+
+        <!-- NEW INGREDIENTS — Add ingredients not yet in the system -->
+        <div class="form_group new_ingredients_form">
+            <label for="new_ingredients">Add New Ingredients</label>
+            <p class="form_hint">
+                Type ingredients to add to the system — separate with commas.
+                They'll be saved and added to this recipe.
+            </p>
+            <input
+                type="text"
+                id="new_ingredients"
+                name="new_ingredients"
+                placeholder="e.g. Garlic, Olive Oil, Chilli flakes"
+                class="form_input_full"
+            />
+            <div id="new_ingredients_preview" class="ingredients_tags"></div>
+        </div>
+        <div class="form_actions">
+            <a href="{% url 'recipe_list' %}" class="btn_cancel">Cancel</a>
+            <button type="submit" class="btn_submit">Add Recipe</button>
+        </div>
+
+    </form>
+
+</main>
+
+<style>
+    .add_recipe {
+        max-width: 700px;
+        margin: 2rem auto;
+        padding: 0 1.5rem 4rem;
+    }
+
+    .add_recipe h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2c2520;
+        margin-bottom: 1.8rem;
+        border-bottom: 2px solid #e0d5c1;
+        padding-bottom: 0.8rem;
+    }
+
+    .recipe_form {
+        background: #fff;
+        border: 1.5px solid #e0d5c1;
+        border-radius: 12px;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.4rem;
+    }
+
+    .form_group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form_group label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #025f1e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form_group input[type="text"],
+    .form_group input[type="number"],
+    .form_group select,
+    .form_group textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #ccc;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .form_group input:focus,
+    .form_group select:focus,
+    .form_group textarea:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .form_group textarea { resize: vertical; }
+
+    .form_hint {
+        font-size: 0.85rem;
+        color: #888;
+        margin-bottom: 0.5rem;
+    }
+
+    .form_hint a { color: #6ac383; text-decoration: none; font-weight: 600; }
+    .form_hint a:hover { text-decoration: underline; }
+
+    .ingredient_checkboxes {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.6rem;
+        background: #f9f6f0;
+        border: 1.5px solid #e0d5c1;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .checkbox_label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #3d332b;
+        cursor: pointer;
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 400;
+    }
+
+    .checkbox_label input[type="checkbox"] { accent-color: #6ac383; width: 16px; height: 16px; }
+
+    .errorlist { list-style: none; margin-top: 0.2rem; }
+    .errorlist li { font-size: 0.78rem; color: #c0392b; }
+
+    .form_error {
+        background: #fdf0ee; color: #9b2226;
+        border: 1px solid #f0b4ae; border-radius: 6px;
+        padding: 0.6rem 1rem; font-size: 0.85rem;
+    }
+
+    .messages { margin-bottom: 0.5rem; }
+    .message { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 0.4rem; }
+    .message.success { background: #1a3a2a; color: #4caf82; border: 1px solid #2d5a3d; }
+    .message.error   { background: #3a1a1a; color: #ff6b6b; border: 1px solid #5a2d2d; }
+
+    .form_actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.8rem;
+        padding-top: 0.5rem;
+    }
+
+    .btn_submit {
+        padding: 0.75rem 2rem;
+        background: #96D4AA; color: #fff;
+        border: none; border-radius: 8px;
+        font-size: 1rem; font-weight: 600; cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn_submit:hover { background: #6ac383; }
+
+    .btn_cancel {
+        padding: 0.75rem 1.5rem;
+        background: #fff; color: #555;
+        border: 1.5px solid #ccc; border-radius: 8px;
+        font-size: 1rem; text-decoration: none;
+        transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn_cancel:hover { border-color: #b85c38; color: #b85c38; }
+
+    .ingredients_select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #ccc;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+        background: #fff;
+    }
+
+    .ingredients_select:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .ingredients_select_recipe {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #ccc;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+        background: #fff;
+    }
+
+    .ingredients_select_recipe:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .new_ingredients_form {
+        background: linear-gradient(135deg, #fff 0%, #faf6f0 100%);
+        border: 1.5px solid #e0d5c1;
+        border-radius: 10px;
+        padding: 1.2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .form_input_full {
+        width: 100%;
+        padding: 0.6rem 0.9rem;
+        border: 1.5px solid #ccc;
+        border-radius: 7px;
+        font-size: 0.9rem;
+        color: #111;
+        font-family: inherit;
+        outline: none;
+        margin-bottom: 0.6rem;
+        transition: border-color 0.2s;
+    }
+
+    .form_input_full:focus {
+        border-color: #6ac383;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15);
+    }
+
+    .ingredients_tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .ingredient_tag {
+        background: linear-gradient(135deg, #f0faf4 0%, #e8f5f0 100%);
+        color: #2d6a4f;
+        border: 1.5px solid #6ac383;
+        border-radius: 20px;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        box-shadow: 0 1px 4px rgba(106, 195, 131, 0.15);
+    }
+
+    /* Select2 custom styling */
+    .select2-container--default .select2-selection--multiple {
+        border: 1.5px solid #ccc !important;
+        border-radius: 8px !important;
+        background: #fff !important;
+        min-height: 45px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+        border-color: #6ac383 !important;
+        box-shadow: 0 0 0 3px rgba(106,195,131,0.15) !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #f0faf4 !important;
+        border: 1px solid #6ac383 !important;
+        color: #2d6a4f !important;
+        border-radius: 5px !important;
+        padding: 3px 8px !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #6ac383 !important;
+        margin-right: 4px !important;
+        font-weight: bold !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        color: #2d6a4f !important;
+    }
+    .select2-dropdown {
+        border: 1.5px solid #6ac383 !important;
+        border-radius: 8px !important;
+    }
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        border: 1.5px solid #ccc !important;
+        border-radius: 4px !important;
+        padding: 8px 12px !important;
+    }
+    .select2-results__option--highlighted {
+        background-color: #96D4AA !important;
+        color: #fff !important;
+    }
+    .select2-results__option {
+        padding: 10px 12px !important;
+        font-size: 0.95rem !important;
+    }
+</style>
+
+<script>
+    // Initialize Select2 for recipe ingredients
+    document.addEventListener('DOMContentLoaded', function() {
+        $('#id_ingredients').select2({
+            placeholder: '-- Click to search and select ingredients --',
+            allowClear: true,
+            width: '100%',
+            containerCssClass: 'select2-container-custom',
+            dropdownCssClass: 'select2-dropdown-custom',
+            closeOnSelect: false
+        });
+
+        // Display selected ingredients as tags
+        $('#id_ingredients').on('change', function() {
+            const selectedContainer = document.getElementById('selected_ingredients');
+            const selectedOptions = $(this).find('option:selected');
+            
+            selectedContainer.innerHTML = selectedOptions
+                .map((_, opt) => `<span class="ingredient_tag">${$(opt).text()}</span>`)
+                .get()
+                .join('');
+        });
+
+        // Trigger initial display of selected ingredients
+        $('#id_ingredients').trigger('change');
+    });
+
+    // Handle new ingredients comma-separated input
+    document.getElementById('new_ingredients').addEventListener('input', function () {
+        const previewContainer = document.getElementById('new_ingredients_preview');
+        const names = this.value.split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+        
+        previewContainer.innerHTML = names
+            .map(name => `<span class="ingredient_tag new">${name}</span>`)
+            .join('');
+    });
+</script>
+
+{% endblock %}

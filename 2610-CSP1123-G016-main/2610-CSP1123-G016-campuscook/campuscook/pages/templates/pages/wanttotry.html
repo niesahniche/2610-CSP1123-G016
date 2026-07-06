@@ -1,0 +1,411 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+
+<main class="wtt-page">
+
+  <div class="wtt-header">
+    <div>
+      <h1>🍳 Recipes I Want to Try</h1>
+      <p class="wtt-subtitle">
+        Your personal cooking bucket list — recipes saved from the <em>To Make</em> button.
+      </p>
+    </div>
+    <a href="{% url 'recipe_list' %}" class="btn-browse">Browse Recipes</a>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="wtt-alert wtt-alert--{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  {% if want_to_try %}
+    <p class="wtt-count">{{ want_to_try|length }} recipe{{ want_to_try|length|pluralize }} saved</p>
+
+    <div class="wtt-grid">
+      {% for entry in want_to_try %}
+        <article class="wtt-card" id="wtt-card-{{ entry.recipe.id }}">
+
+          <!-- Image / placeholder -->
+          <div class="wtt-img-wrap">
+            {% if entry.recipe.image %}
+              <img src="{{ entry.recipe.image.url }}" alt="{{ entry.recipe.name }}" class="wtt-img">
+            {% else %}
+              <span class="wtt-placeholder">🍽️</span>
+            {% endif %}
+          </div>
+
+          <!-- Card body -->
+          <div class="wtt-body">
+            <h3 class="wtt-name">{{ entry.recipe.name }}</h3>
+
+            <div class="wtt-tags">
+              <span class="tag">⏱ {{ entry.recipe.cooking_time }} min</span>
+              <span class="tag">🔧 {{ entry.recipe.appliance }}</span>
+              <span class="tag">💰 {{ entry.recipe.get_budget_display }}</span>
+              {% if entry.recipe.is_halal %}
+                <span class="tag tag--halal">✅ Halal</span>
+              {% else %}
+                <span class="tag tag--nonhalal">❌ Non-Halal</span>
+              {% endif %}
+            </div>
+
+            <p class="wtt-added">Added {{ entry.added_at|date:"d M Y" }}</p>
+
+            <div class="wtt-actions">
+              <a href="{% url 'recipe_detail' entry.recipe.id %}" class="btn-view">View Recipe</a>
+
+              <!-- Check ingredients — calls same step1CheckIngredients JS used on recipe_detail -->
+              <button
+                class="btn-check btn_action btn_tomake"
+                data-recipe-id="{{ entry.recipe.id }}"
+                data-recipe-name="{{ entry.recipe.name }}"
+                onclick="step1CheckIngredients(this)">
+                🛒 Check Ingredients
+              </button>
+
+              <!-- Remove from list -->
+              <button
+                class="btn-remove-wtt"
+                onclick="removeWantToTry(this, {{ entry.recipe.id }})">
+                ✕ Remove
+              </button>
+            </div>
+          </div>
+
+        </article>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="wtt-empty">
+      <span class="wtt-empty-icon">🍳</span>
+      <h2>Nothing here yet!</h2>
+      <p>Click the <strong>🍳 To Make</strong> button on any recipe and it will appear here.</p>
+      <a href="{% url 'recipe_list' %}" class="btn-browse">Find a Recipe</a>
+    </div>
+  {% endif %}
+
+</main>
+
+<!-- ── Ingredient check popup (same structure as recipe_detail) ─────────── -->
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
+<div class="popup" id="popup">
+  <button class="popup-close" onclick="closePopup()">✕</button>
+  <div id="popupContent"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<style>
+  /* ── Page layout ── */
+  .wtt-page { max-width: 1000px; margin: 2.5rem auto; padding: 0 1.5rem 5rem; }
+
+  .wtt-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+    margin-bottom: 2rem; padding-bottom: 1.2rem;
+    border-bottom: 3px solid var(--tan, #dfd2bd);
+  }
+  .wtt-header h1 {
+    font-size: 2rem; font-weight: 800; color: var(--brown, #2c2520);
+    margin: 0 0 0.25rem;
+  }
+  .wtt-subtitle { color: #888; font-size: 0.92rem; margin: 0; }
+
+  .btn-browse {
+    padding: 0.6rem 1.2rem; background: var(--green-dark, #2d6a4f);
+    color: #fff; border-radius: 8px; text-decoration: none;
+    font-size: 0.88rem; font-weight: 700; white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .btn-browse:hover { background: var(--green, #6ac383); }
+
+  .wtt-count { color: #999; font-size: 0.85rem; margin-bottom: 1.2rem; }
+
+  /* ── Alert ── */
+  .wtt-alert {
+    padding: 0.7rem 1rem; border-radius: 8px; margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+  .wtt-alert--success { background: #eaf6ee; color: #2d6a4f; border: 1px solid #b2dfcc; }
+  .wtt-alert--error   { background: #fdf0ee; color: #9b2226; border: 1px solid #f0b4ae; }
+
+  /* ── Grid ── */
+  .wtt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.4rem;
+  }
+
+  /* ── Card ── */
+  .wtt-card {
+    background: #fff;
+    border: 1.5px solid var(--tan, #dfd2bd);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(44,37,32,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex; flex-direction: column;
+  }
+  .wtt-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(44,37,32,0.1); }
+
+  .wtt-img-wrap {
+    width: 100%; height: 160px; background: #f5f0e8;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .wtt-img { width: 100%; height: 100%; object-fit: cover; }
+  .wtt-placeholder { font-size: 3rem; }
+
+  .wtt-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+
+  .wtt-name {
+    font-size: 1.05rem; font-weight: 700;
+    color: var(--brown, #2c2520); margin: 0;
+  }
+
+  .wtt-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .tag {
+    font-size: 0.72rem; padding: 0.2rem 0.55rem;
+    background: var(--cream, #f9f5ee); border: 1px solid var(--tan, #dfd2bd);
+    border-radius: 20px; color: var(--olive, #5a6a3a);
+  }
+  .tag--halal    { background: #f0faf4; border-color: var(--green, #6ac383); color: var(--green-dark, #2d6a4f); }
+  .tag--nonhalal { background: #fff8f5; border-color: #f0b4ae; color: #b85c38; }
+
+  .wtt-added { font-size: 0.75rem; color: #bbb; margin: 0; }
+
+  .wtt-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: auto; padding-top: 0.5rem; }
+
+  .btn-view {
+    padding: 0.45rem 0.9rem; background: var(--green-dark, #2d6a4f);
+    color: #fff; border-radius: 7px; text-decoration: none;
+    font-size: 0.8rem; font-weight: 700; transition: background 0.2s;
+  }
+  .btn-view:hover { background: var(--green, #6ac383); }
+
+  .btn-check {
+    padding: 0.45rem 0.9rem; font-size: 0.8rem; font-weight: 600;
+    border-radius: 7px; border: 1.5px solid #e6a817;
+    background: #fff8ee; color: #8a5a00; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-check:hover { background: #e6a817; color: #fff; }
+
+  .btn-remove-wtt {
+    padding: 0.45rem 0.8rem; font-size: 0.78rem; font-weight: 600;
+    border-radius: 7px; border: 1.5px solid #f0b4ae;
+    background: #fff8f5; color: #b85c38; cursor: pointer;
+    transition: background 0.2s; margin-left: auto;
+  }
+  .btn-remove-wtt:hover { background: #b85c38; color: #fff; border-color: #b85c38; }
+
+  /* ── Empty state ── */
+  .wtt-empty {
+    text-align: center; padding: 4rem 2rem;
+    border: 2px dashed var(--tan, #dfd2bd); border-radius: 16px;
+    background: #fdfaf5;
+  }
+  .wtt-empty-icon { font-size: 3.5rem; display: block; margin-bottom: 1rem; }
+  .wtt-empty h2   { font-size: 1.4rem; color: var(--brown, #2c2520); margin: 0 0 0.5rem; }
+  .wtt-empty p    { color: #888; margin: 0 0 1.5rem; }
+
+  /* ── Popup (same as recipe_detail) ── */
+  .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300; }
+  .popup-overlay.open { display: block; }
+  .popup {
+    display: none; position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); background: #fff; border-radius: 16px;
+    padding: 2rem; min-width: 300px; max-width: 420px; width: 90%;
+    z-index: 301; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .popup.open { display: block; }
+  .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
+  .popup-icon  { font-size: 2.5rem; text-align: center; margin-bottom: 0.8rem; }
+  .popup-title { font-size: 1.2rem; font-weight: 800; color: #2c2520; margin-bottom: 0.5rem; text-align: center; }
+  .popup-msg   { font-size: 0.88rem; color: #666; text-align: center; margin-bottom: 1.2rem; }
+  .ingredient-section { margin-bottom: 1rem; }
+  .ingredient-section h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+  .ingredient-section.available h4 { color: #2d6a4f; }
+  .ingredient-section.missing  h4  { color: #b85c38; }
+  .ingredient-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+  .ingredient-list li { font-size: 0.88rem; padding: 0.3rem 0.7rem; border-radius: 6px; }
+  .available .ingredient-list li { background: #f0faf4; color: #2d6a4f; }
+  .missing   .ingredient-list li { background: #fff3ee; color: #b85c38; }
+  .popup-btn {
+    display: block; width: 100%; padding: 0.75rem;
+    background: #96D4AA; color: #fff; border: none; border-radius: 8px;
+    font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    text-align: center; text-decoration: none; margin-top: 0.8rem; transition: background 0.2s;
+  }
+  .popup-btn:hover { background: #6ac383; }
+  .popup-btn.secondary {
+    background: #fff; color: #555; border: 1.5px solid #ddd; margin-top: 0.4rem;
+  }
+  .popup-btn.secondary:hover { border-color: #6ac383; color: #2d6a4f; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: #2c2520; color: #fff;
+    padding: 0.7rem 1.2rem; border-radius: 8px;
+    font-size: 0.85rem; opacity: 0; transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show    { opacity: 1; transform: none; }
+  .toast.success { background: #2d6a4f; }
+  .toast.error   { background: #b85c38; }
+
+  @media (max-width: 600px) {
+    .wtt-header { flex-direction: column; align-items: flex-start; }
+    .wtt-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  // ── Cookie helper ───────────────────────────────────────────────────────────
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+  }
+
+  // ── Toast helper ────────────────────────────────────────────────────────────
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  // ── Popup helpers ───────────────────────────────────────────────────────────
+  function openPopup()  {
+    document.getElementById('popup').classList.add('open');
+    document.getElementById('popupOverlay').classList.add('open');
+  }
+  function closePopup() {
+    document.getElementById('popup').classList.remove('open');
+    document.getElementById('popupOverlay').classList.remove('open');
+  }
+
+  // ── Step 1: Check ingredients (reused from recipe_detail) ──────────────────
+  async function step1CheckIngredients(btn) {
+    const recipeId = btn.dataset.recipeId;
+    const origText = btn.textContent;
+    btn.disabled    = true;
+    btn.textContent = 'Checking…';
+
+    try {
+      const res  = await fetch(`/api/check-ingredients/${recipeId}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      showStep1Popup(data);
+    } catch {
+      showToast('Could not check ingredients. Try again.', 'error');
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = origText;
+    }
+  }
+
+  function showStep1Popup(data) {
+    const available = data.available || [];
+    const missing   = data.missing   || [];
+
+    const availableHtml = available.length ? `
+      <div class="ingredient-section available">
+        <h4>✅ You have these (${available.length})</h4>
+        <ul class="ingredient-list">
+          ${available.map(n => `<li>${n}</li>`).join('')}
+        </ul>
+      </div>` : '';
+
+    const missingHtml = missing.length ? `
+      <div class="ingredient-section missing">
+        <h4>❌ You're missing these (${missing.length})</h4>
+        <ul class="ingredient-list">
+          ${missing.map(n => `<li>${n}</li>`).join('')}
+        </ul>
+      </div>` : '';
+
+    document.getElementById('popupContent').innerHTML = `
+      <div class="popup-icon">${data.can_cook ? '🎉' : '🛒'}</div>
+      <div class="popup-title">${data.can_cook ? 'You have everything!' : 'Some ingredients missing'}</div>
+      <div class="popup-msg">
+        ${data.can_cook
+          ? `You can make <strong>${data.recipe}</strong> with what you have.`
+          : `You're missing some ingredients for <strong>${data.recipe}</strong>.`}
+      </div>
+      ${availableHtml}
+      ${missingHtml}
+      <button class="popup-btn" onclick="step2AddToGrocery(${data.recipe_id})">
+        ${data.can_cook ? '✅ Add to grocery list' : '🛒 Add all to grocery list (missing flagged)'}
+      </button>
+      <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+    `;
+    openPopup();
+  }
+
+  async function step2AddToGrocery(recipeId) {
+    try {
+      const res  = await fetch(`/api/add-ingredients/${recipeId}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      document.getElementById('popupContent').innerHTML = `
+        <div class="popup-icon">✅</div>
+        <div class="popup-title">Grocery list updated!</div>
+        <div class="popup-msg">
+          ${data.can_cook
+            ? `All ingredients for <strong>${data.recipe}</strong> are in your grocery list.`
+            : `<strong>${data.added_missing.length}</strong> missing ingredient(s) added.`}
+        </div>
+        <a href="/grocery/" class="popup-btn">View Grocery List</a>
+        <button class="popup-btn secondary" onclick="closePopup()">Close</button>
+      `;
+    } catch {
+      showToast('Could not update grocery list. Try again.', 'error');
+    }
+  }
+
+  // ── Remove from Want to Try ─────────────────────────────────────────────────
+  async function removeWantToTry(btn, recipeId) {
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/toggle-want-to-try/${recipeId}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const card = document.getElementById(`wtt-card-${recipeId}`);
+      if (card) {
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity    = '0';
+        setTimeout(() => card.remove(), 300);
+      }
+      // Update count
+      const countEl = document.querySelector('.wtt-count');
+      if (countEl) {
+        const remaining = document.querySelectorAll('.wtt-card').length - 1;
+        if (remaining === 0) location.reload();        // show empty state
+        else countEl.textContent = `${remaining} recipe${remaining !== 1 ? 's' : ''} saved`;
+      }
+      const cleanedItems = (data.updated_item_count || 0) + (data.deleted_missing_count || 0);
+      showToast(
+        cleanedItems
+          ? `Removed from Want to Try and cleaned ${cleanedItems} grocery item${cleanedItems !== 1 ? 's' : ''}`
+          : 'Removed from Want to Try',
+        ''
+      );
+    } catch {
+      showToast('Could not remove. Try again.', 'error');
+      btn.disabled = false;
+    }
+  }
+</script>
+
+{% endblock %}

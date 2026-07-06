@@ -4,7 +4,7 @@ CampusCook is a Django web application for managing recipes, groceries, and cook
 
 ## Project Structure
 
-```text
+```
 2610-CSP1123-G016-MAIN/
 │
 ├── 2610-CSP1123-G016-campuscook/
